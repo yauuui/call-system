@@ -7,9 +7,11 @@
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2314b8a6'><path d='M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z'/></svg>">
   
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   
+  <!-- Chart.js グラフ描画用ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -134,8 +136,8 @@
 
     .target-box { background: #fdfdfd; border: 1px solid #e2e8f0; padding: 15px; border-radius: var(--radius); }
     .progress-bar-bg { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin-top: 6px; }
-    .progress-bar-fill { height: 100%; background-color: var(--accent); transition: width 0.4s ease; }
-    .progress-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-main); margin-top: 6px; }
+    .progress-bar-fill { height: 100%; transition: width 0.4s ease, background-color 0.4s ease; }
+    .progress-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-main); margin-top: 6px; align-items: center; }
 
     .counter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; position: relative; }
     .counter-item { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); padding: 8px 15px; background: #fff; transition: 0.2s; border-radius: 6px; }
@@ -246,6 +248,7 @@
 </head>
 <body>
 
+<!-- SVGアイコン群 -->
 <svg style="display:none;">
   <symbol id="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></symbol>
   <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.21 15.89A10 10 0 118.11 2.8c.532.06 1.05.187 1.55.378V12h9.19a9.962 9.962 0 012.36 3.89z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12.5 3.208V11h7.792" /></symbol>
@@ -299,12 +302,12 @@
 
 <div class="app-layout" id="main-app">
   
-<aside class="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-brand">
       <svg class="icon" style="color:var(--accent);"><use href="#icon-phone"></use></svg>
       <span>CALL APP</span>
     </div>
-    <ul class="nav-menu" style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+    <ul class="nav-menu">
       <li class="nav-item active" id="nav-counter" onclick="switchTab('counter')">
         <span class="nav-icon"><svg class="icon"><use href="#icon-phone"></use></svg></span>
         <span>コールカウント</span>
@@ -318,20 +321,16 @@
         <span>KPI / KGI</span>
       </li>
       <li class="nav-item" id="nav-analytics" onclick="switchTab('analytics')">
-        <span class="nav-icon"><svg class="icon"><use href="#icon-trend"></use></svg></span>
+        <span class="nav-icon"><svg class="icon"><use href="#icon-chart"></use></svg></span>
         <span>数値分析レポート</span>
       </li>
       <li class="nav-item" id="nav-status" onclick="switchTab('status')">
-        <span class="nav-icon"><svg class="icon"><use href="#icon-chart"></use></svg></span>
+        <span class="nav-icon"><svg class="icon"><use href="#icon-trend"></use></svg></span>
         <span>ステータス分析</span>
       </li>
       <li class="nav-item" id="nav-ranking" onclick="switchTab('ranking')">
         <span class="nav-icon"><svg class="icon"><use href="#icon-trophy"></use></svg></span>
         <span>チームランキング</span>
-      </li>
-      <li class="nav-item" id="nav-manual" onclick="switchTab('manual')" style="margin-top: auto; margin-bottom: 15px;">
-        <span class="nav-icon"><svg class="icon"><use href="#icon-clipboard"></use></svg></span>
-        <span>マニュアル</span>
       </li>
     </ul>
   </aside>
@@ -362,13 +361,14 @@
 
     <div class="content-area">
       
+      <!-- =================【タブ1: コールカウント画面】================= -->
       <div id="page-counter" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
         
         <div class="card" style="margin-bottom: 0px; background: linear-gradient(135deg, #1e293b, #334155); color: #fff; border:none; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           <div class="card-body" style="padding: 15px 25px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
               <div style="font-size: 14px; font-weight: 700; display:flex; align-items:center; gap:8px;">
-                <svg class="icon" style="color:var(--accent);"><use href="#icon-flag"></use></svg> 本日のチーム総アポ獲得数
+                <svg class="icon" style="color:var(--accent);"><use href="#icon-star"></use></svg> 本日のチーム総アポ獲得数
               </div>
               <div style="font-size: 28px; font-weight: 700; color: var(--accent); line-height:1;">
                 <span id="team-apo-count">0</span> <span style="font-size: 14px; color:#cbd5e1; font-weight:600;">/ <span id="team-apo-target">0</span> 件</span>
@@ -476,7 +476,7 @@
                     <div class="progress-bar-bg"><div class="progress-bar-fill" id="apo-progress-bar" style="width:0%;"></div></div>
                     <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:#666;">
                       <span>1アポ必要架電: <strong id="kpi-cpa" style="color:#333;">-</strong></span>
-                      <span>架電数ペース: <strong id="cph-current-display" style="color:var(--accent);">0.0</strong> / <span id="cph-target-display">0.0</span></span>
+                      <span>架電数ペース: <strong id="cph-current-display" style="color:var(--accent);">0.0</strong> / <span id="cph-target-display">0.0</span> <span id="cph-achieved-badge" style="display:none; background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; vertical-align:middle; margin-left:4px;">達成</span></span>
                     </div>
                   </div>
                 </div>
@@ -496,7 +496,13 @@
         </div>
 
         <div class="card">
-          <div class="card-header">時間帯ごとの分析 (9:00 〜 18:00)</div>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span>時間帯ごとの分析 (9:00 〜 18:00)</span>
+            <div style="display: flex; gap: 10px;">
+              <select id="hourly-user-select" onchange="renderHourlyTable()" style="padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; outline: none;"></select>
+              <select id="hourly-product-select" onchange="renderHourlyTable()" style="padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; outline: none;"></select>
+            </div>
+          </div>
           <div class="table-container">
             <table id="hourly-table">
               <thead>
@@ -527,6 +533,7 @@
 
       </div>
 
+      <!-- =================【タブ2: ナレッジベース画面】================= -->
       <div id="page-script" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="card" style="min-height: 80vh;">
           
@@ -574,6 +581,7 @@
         </div>
       </div>
 
+      <!-- =================【タブ3: KPI / KGI 画面】================= -->
       <div id="page-kpi" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="toolbar">
           <div class="filters">
@@ -603,6 +611,7 @@
         </div>
       </div>
 
+      <!-- =================【タブ4: 分析画面】================= -->
       <div id="page-analytics" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="toolbar">
           <div class="filters">
@@ -646,6 +655,7 @@
         </div>
       </div>
 
+      <!-- =================【タブ5: ステータス分析画面】================= -->
       <div id="page-status" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="toolbar">
           <div class="filters">
@@ -681,7 +691,7 @@
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-bottom: 0px;">
             <div class="card">
                 <div class="card-header">ステータス内訳</div>
                 <div class="card-body">
@@ -711,6 +721,7 @@
         </div>
       </div>
 
+      <!-- =================【タブ6: チームランキング画面】================= -->
       <div id="page-ranking" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="card">
           <div class="card-header">
@@ -736,109 +747,12 @@
           </div>
         </div>
       </div>
-      　</div>
-
-<div id="page-manual" style="display: none; flex-direction: column; gap: 15px; width: 100%; height: 100%; overflow-y: auto;">          <div class="card">
-          <div class="card-header">架電管理 ＆ 総合分析システム ご利用マニュアル</div>
-          <div class="card-body" style="line-height: 1.6; font-size: 14px; color: var(--text-main);">
-             <p>本システムは、テレアポチームの生産性を最大化するために開発されたクラウド型のリアルタイム架電管理・分析ツールです。メンバーの架電状況、アポ獲得数、チームのナレッジをリアルタイムで共有・可視化し、データドリブンな営業活動をサポートします。</p>
-
-             <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 25px; font-size: 16px;">1. ログインと基本操作</h3>
-             <h4 style="margin-top: 15px; margin-bottom: 5px; font-size: 14px;">ログイン方法</h4>
-             <ul style="margin-top: 0; padding-left: 20px;">
-               <li>システムにアクセスすると、ログイン画面が表示されます。</li>
-               <li>「使用するアカウントを選択」のプルダウンから、ご自身のお名前を選択します。</li>
-               <li>「システムを利用開始する」 ボタンをクリックすると、ダッシュボード（コールカウント画面）が表示されます。</li>
-             </ul>
-             <h4 style="margin-top: 15px; margin-bottom: 5px; font-size: 14px;">画面の基本構成</h4>
-             <ul style="margin-top: 0; padding-left: 20px;">
-               <li><strong>左側（サイドバー）:</strong> 各機能（タブ）への切り替えメニューです。</li>
-               <li><strong>上部（トップバー）:</strong> 現在の画面名、接続ステータス、ログイン中のアカウント名、設定・ログアウトボタンが表示されます。</li>
-               <li><strong>中央（メインエリア）:</strong> 選択したタブの機能が表示されます。</li>
-             </ul>
-
-             <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 25px; font-size: 16px;">2. 各機能（タブ）の使い方</h3>
-             
-             <h4 style="margin-top: 15px; margin-bottom: 5px; color: var(--accent); font-size: 14px;">コールカウント（日々の架電業務）</h4>
-             <p style="margin-top: 0;">日々の架電業務を行いながら、リアルタイムで結果を記録・確認するメイン画面です。</p>
-             <ul style="padding-left: 20px;">
-               <li><strong>フィルター機能:</strong> 画面上部で「日付」と「商材」を選択します。※ログイン時は「全商材まとめ (閲覧のみ)」が選択されているため、架電を始める際は必ず対象の「商材」を選択してください。</li>
-               <li><strong>タイマー:</strong> 「開始」で稼働時間の計測をスタート。「停止」でストップします。「設定」ボタンから手動で時間を修正することも可能です。</li>
-               <li><strong>集計結果 ＆ 分析指標:</strong> 受付突破率、受注率、架電数(件/h)などが自動で計算・表示されます。</li>
-               <li><strong>本日の目標 (直接編集可):</strong> 「定性目標」「アポ目標」「架電目標」を直接クリックして入力・編集できます。入力すると自動でクラウドに保存されます。</li>
-               <li><strong>架電入力パネル:</strong> 架電ステータス（受付BK、不通、担当不在、アポ獲得など）の「＋」「−」ボタンを押してカウントします。</li>
-               <li><strong>本日のチーム総アポ獲得数:</strong> チーム全員のアポ合計と、今日のチーム目標に対する進捗が上部にリアルタイムで表示されます。</li>
-               <li><strong>CSV出力 / 振り返りコピー:</strong> その日の結果をCSVでダウンロードしたり、振り返り用の数値をクリップボードにコピーしたりできます。</li>
-               <li><strong>リアルタイム通知:</strong> チームの誰かがアポを獲得したり、ランキングが変動したりすると、画面右下にリアルタイムでポップアップ通知が表示されます。</li>
-             </ul>
-
-             <h4 style="margin-top: 20px; margin-bottom: 5px; color: var(--accent); font-size: 14px;">ナレッジベース（トークスクリプトと知識）</h4>
-             <p style="margin-top: 0;">チームで共有するスクリプトや、個人用のメモを管理する画面です。</p>
-             <ul style="padding-left: 20px;">
-               <li><strong>カテゴリーの切り替え:</strong> 「スクリプト」「カウンター（切り返し）」「知識（商材・競合）」の3つのカテゴリーをタブで切り替えます。</li>
-               <li><strong>共有範囲の切り替え:</strong>
-                 <ul style="padding-left: 20px; margin-top: 5px;">
-                   <li><strong>チーム共有:</strong> チーム全員で同じ内容を閲覧します。（※編集は管理者のみ可能）</li>
-                   <li><strong>個人用:</strong> あなた専用のメモやスクリプトを作成・保存できます。他のメンバーからは見えません。</li>
-                 </ul>
-               </li>
-               <li><strong>カウンター機能:</strong> お客様の「ネガティブ（断り文句）」に対する「カウンタートーク（回答）」と「解説」をセットで確認できます。</li>
-             </ul>
-
-             <h4 style="margin-top: 20px; margin-bottom: 5px; color: var(--accent); font-size: 14px;">KPI / KGI（目標とシフトの管理）</h4>
-             <p style="margin-top: 0;">月間の目標や、日々の予想・実績、シフト情報を管理する画面です。</p>
-             <ul style="padding-left: 20px;">
-               <li><strong>シフトCSVインポート:</strong> ダウンロードしたシフトデータ（CSV）を「シフトCSVインポート」ボタンから読み込むと、各メンバーのシフト（開始・終了時間）と日報の実績が自動で表に反映されます。</li>
-               <li><strong>目標の入力:</strong> 「全体目標」や各メンバーの「目標」のセルを直接クリックして数値を入力できます。</li>
-               <li><strong>自動補正:</strong> 過去の日付において、予想件数より実績件数が低かった場合、自動的に予想件数が実績件数に合わせて下方修正されます。</li>
-               <li><strong>保存:</strong> 編集後は必ず右上の「保存する」ボタンを押してください。</li>
-             </ul>
-
-             <h4 style="margin-top: 20px; margin-bottom: 5px; color: var(--accent); font-size: 14px;">数値分析レポート</h4>
-             <p style="margin-top: 0;">過去の架電データをさまざまな条件で絞り込んで分析する画面です。</p>
-             <ul style="padding-left: 20px;">
-               <li>アカウント、商材、期間、集計単位（日次・週次・月次）を指定してデータを絞り込みます。</li>
-               <li>稼働時間、総架電数、各ステータスのカウント、各種パーセンテージが一覧表示されます。</li>
-             </ul>
-
-             <h4 style="margin-top: 20px; margin-bottom: 5px; color: var(--accent); font-size: 14px;">ステータス分析</h4>
-             <p style="margin-top: 0;">架電の傾向を視覚的なグラフで分析する画面です。</p>
-             <ul style="padding-left: 20px;">
-               <li><strong>ステータス内訳:</strong> 選択した期間・メンバー・商材の架電結果をドーナツチャートで表示します。</li>
-               <li><strong>時間帯ごとの推移:</strong> 「受付BK」「担当不在」「担当コネクト」「アポ」の時間帯別の推移を折れ線グラフで表示し、つながりやすい時間を分析できます。</li>
-               <li><strong>日別ステータス推移:</strong> 日ごとの架電状況を積み上げ棒グラフで表示し、日々の活動量の変化を確認できます。</li>
-             </ul>
-
-             <h4 style="margin-top: 20px; margin-bottom: 5px; color: var(--accent); font-size: 14px;">チームランキング</h4>
-             <p style="margin-top: 0;">期間（今週・今月）を指定して、チーム内のランキングを確認する画面です。</p>
-             <ul style="padding-left: 20px;">
-               <li>「架電数 (件/h) ランキング」と「アポ獲得数 ランキング」が表示されます。モチベーションアップに活用してください。</li>
-             </ul>
-
-             <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 25px; font-size: 16px;">3. よくある質問・トラブルシューティング</h3>
-             <div style="background: #f8fafc; padding: 15px 20px; border-radius: var(--radius); border: 1px solid var(--border);">
-               <p style="margin-top: 0;"><strong>Q. タイマーが押せません / 架電入力パネルが反応しません</strong></p>
-               <p style="color: var(--text-muted); margin-bottom: 15px;">A. 画面上部の「商材」が「【全商材まとめ (閲覧のみ)】」になっている可能性があります。個別の商材を選択してから操作してください。</p>
-               
-               <p><strong>Q. 画面に「ローカル」と表示され、他の人のデータが反映されません</strong></p>
-               <p style="color: var(--text-muted); margin-bottom: 15px;">A. ネットワークの接続が切れているか、システムの設定（Firebase）に問題がある可能性があります。一時的にあなたのブラウザ内（ローカル）にデータが保存されていますが、他の人とは同期されません。管理者に確認してください。</p>
-
-               <p><strong>Q. 誤ってデータをリセットしてしまいました</strong></p>
-               <p style="color: var(--text-muted); margin-bottom: 15px;">A. タイマー横の「クリア」ボタンは、選択している商材のその日のデータをリセットします。実行時に確認メッセージが出ますが、消してしまったデータは復元できないためご注意ください。</p>
-
-               <p><strong>Q. 目標を設定したのに反映されていません</strong></p>
-               <p style="color: var(--text-muted); margin-bottom: 0;">A. 「KPI / KGI」タブでシフトデータを変更した場合は、必ず右上の「保存する」ボタンを押してください。コールカウント画面の「本日の目標」は入力と同時に自動保存されます。</p>
-             </div>
-          </div>
-        </div>
-      </div>
-      </div>
-  </main>
 
     </div>
   </main>
 </div>
 
+<!-- ================= モーダル (設定) ================= -->
 <div id="settings-modal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
@@ -897,7 +811,7 @@
 
   let isInitialLoad = true;
   let prevApoCounts = {};
-  let prevRankingState = { apo: [], cph: [] }; // ランキング変動検知用
+  let prevRankingState = { apo: [], cph: [] };
   let personalScriptUnsubscribe = null;
   
   let breakdownChartInstance = null;
@@ -917,7 +831,14 @@
   function getEmptyState() {
     return {
       counts: Array(10).fill(0),
-      hourly: { uketsuke: Array(10).fill(0), futsu: Array(10).fill(0), fuzai: Array(10).fill(0), tantoBK: Array(10).fill(0), apo: Array(10).fill(0) },
+      hourly: { 
+          uketsuke: Array(10).fill(0), 
+          futsu: Array(10).fill(0), 
+          fuzai: Array(10).fill(0), 
+          tantoBK: Array(10).fill(0), 
+          apo: Array(10).fill(0),
+          time: Array(10).fill(0) // 新設: 架電時間
+      },
       timerSeconds: 0, targetQualitative: "", targetApo: 3, targetCph: 20
     };
   }
@@ -939,11 +860,11 @@
     if(currentUser === "") setupLogin();
   }
 
-  function showToast(message) {
+  function showToast(message, iconId = "#icon-bell") {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<svg class="icon" style="color:var(--accent); width:24px; height:24px;"><use href="#icon-bell"></use></svg> <span>${message}</span>`;
+    toast.innerHTML = `<svg class="icon" style="color:var(--accent); width:24px; height:24px;"><use href="${iconId}"></use></svg> <span>${message}</span>`;
     container.appendChild(toast);
     setTimeout(() => { toast.remove(); }, 5000);
   }
@@ -984,8 +905,8 @@
             if (!isInitialLoad && prevApoCounts[d.user] !== undefined && newApo > prevApoCounts[d.user]) {
               let diff = newApo - prevApoCounts[d.user];
               for(let i=0; i<diff; i++){
-                  if (d.user === currentUser) showToast(`ナイスアポ！ あなたがアポを獲得しました`);
-                  else showToast(`${d.user} さんがアポを獲得しました`);
+                  if (d.user === currentUser) showToast(`ナイスアポ！ あなたがアポを獲得しました`, "#icon-star");
+                  else showToast(`${d.user} さんがアポを獲得しました`, "#icon-star");
               }
             }
             prevApoCounts[d.user] = newApo;
@@ -1039,7 +960,7 @@
     document.getElementById("current-user-display").textContent = currentUser;
 
     currentDateStr = getTodayString(); 
-    currentProduct = ALL_PRODUCTS_KEY; // 初期状態を全商材まとめにする
+    currentProduct = ALL_PRODUCTS_KEY;
     document.getElementById("date-picker").value = currentDateStr;
     document.getElementById("sa-start-date").value = currentDateStr;
     document.getElementById("sa-end-date").value = currentDateStr;
@@ -1077,53 +998,49 @@
     setupLogin();
   }
 
-  
+  // --- タブ切り替え処理 ---
   function switchTab(tabName) {
-    const isCounter = tabName === 'counter';
-    const isRanking = tabName === 'ranking';
-    const isAnalytics = tabName === 'analytics';
-    const isScript = tabName === 'script';
-    const isKpi = tabName === 'kpi';
-    const isStatus = tabName === 'status';
-    const isManual = tabName === 'manual'; // 追加
-    
-    document.getElementById("nav-counter").className = isCounter ? "nav-item active" : "nav-item";
-    document.getElementById("nav-ranking").className = isRanking ? "nav-item active" : "nav-item";
-    document.getElementById("nav-analytics").className = isAnalytics ? "nav-item active" : "nav-item";
-    document.getElementById("nav-script").className = isScript ? "nav-item active" : "nav-item";
-    document.getElementById("nav-kpi").className = isKpi ? "nav-item active" : "nav-item";
-    document.getElementById("nav-status").className = isStatus ? "nav-item active" : "nav-item";
-    document.getElementById("nav-manual").className = isManual ? "nav-item active" : "nav-item"; // 追加
-    
-    document.getElementById("page-counter").style.display = isCounter ? "flex" : "none";
-    document.getElementById("page-ranking").style.display = isRanking ? "flex" : "none";
-    document.getElementById("page-analytics").style.display = isAnalytics ? "flex" : "none";
-    document.getElementById("page-script").style.display = isScript ? "flex" : "none";
-    document.getElementById("page-kpi").style.display = isKpi ? "flex" : "none";
-    document.getElementById("page-status").style.display = isStatus ? "flex" : "none";
-    document.getElementById("page-manual").style.display = isManual ? "flex" : "none"; // 追加
+    const tabs = ['counter', 'ranking', 'analytics', 'script', 'kpi', 'status'];
+    tabs.forEach(t => {
+      document.getElementById(`nav-${t}`).className = (t === tabName) ? "nav-item active" : "nav-item";
+      document.getElementById(`page-${t}`).style.display = (t === tabName) ? "flex" : "none";
+    });
 
-    if(isCounter) {
-      document.getElementById("breadcrumb-current").textContent = "コールカウント"; render();
-    } else if (isRanking) {
-      document.getElementById("breadcrumb-current").textContent = "チームランキング"; renderPeriodRankings();
-    } else if (isAnalytics) {
-      document.getElementById("breadcrumb-current").textContent = "数値分析レポート"; renderAnalytics();
-    } else if (isScript) {
-      document.getElementById("breadcrumb-current").textContent = "ナレッジベース"; loadScriptData();
-    } else if (isKpi) {
-      document.getElementById("breadcrumb-current").textContent = "KPI / KGI"; loadKpiData();
-    } else if (isStatus) {
-      document.getElementById("breadcrumb-current").textContent = "ステータス分析"; renderStatusAnalysis();
-    } else if (isManual) { // 追加
-      document.getElementById("breadcrumb-current").textContent = "マニュアル";
-    }
+    const titles = {
+        'counter': 'コールカウント',
+        'script': 'ナレッジベース',
+        'kpi': 'KPI / KGI',
+        'analytics': '数値分析レポート',
+        'status': 'ステータス分析',
+        'ranking': 'チームランキング'
+    };
+    document.getElementById("breadcrumb-current").textContent = titles[tabName];
+
+    if(tabName === 'counter') render();
+    else if(tabName === 'ranking') renderPeriodRankings();
+    else if(tabName === 'analytics') renderAnalytics();
+    else if(tabName === 'script') loadScriptData();
+    else if(tabName === 'kpi') loadKpiData();
+    else if(tabName === 'status') renderStatusAnalysis();
   }
 
   function updateSelectUIs() {
     const pSel = document.getElementById("product-select"); pSel.innerHTML = "";
     pSel.add(new Option("【全商材まとめ (閲覧のみ)】", ALL_PRODUCTS_KEY));
     productsList.forEach(p => pSel.add(new Option(p, p))); pSel.value = currentProduct;
+
+    // 時間帯テーブル用フィルター
+    const huSel = document.getElementById("hourly-user-select");
+    const curHu = huSel.value || currentUser;
+    huSel.innerHTML = '<option value="__ALL_USERS__">【チーム全体】</option>';
+    usersList.forEach(u => huSel.add(new Option(u, u)));
+    if (curHu === "__ALL_USERS__" || usersList.includes(curHu)) huSel.value = curHu;
+
+    const hpSel = document.getElementById("hourly-product-select");
+    const curHp = hpSel.value || currentProduct;
+    hpSel.innerHTML = '<option value="__ALL_PRODUCTS__">【全商材】</option>';
+    productsList.forEach(p => hpSel.add(new Option(p, p)));
+    if (curHp === "__ALL_PRODUCTS__" || productsList.includes(curHp)) hpSel.value = curHp;
 
     const auSel = document.getElementById("ana-user-select"); auSel.innerHTML = '<option value="__ALL_USERS__">【全員の合計】</option>';
     const suSel = document.getElementById("sa-user-select"); suSel.innerHTML = '<option value="__ALL_USERS__">【全員の合計】</option>';
@@ -1219,7 +1136,7 @@
           if (db) db.collection('kaden_personal_scripts').doc(currentUser).set({ scripts: scriptData.personal }, { merge: true });
           else localStorage.setItem("kaden_personal_scripts_" + currentUser, JSON.stringify(scriptData.personal));
       }
-      showToast("保存しました");
+      showToast("保存しました", "#icon-save");
       renderScriptContent();
   }
 
@@ -1377,7 +1294,7 @@
 
       let totalUk = 0, totalFu = 0, totalFz = 0, totalTbk = 0, totalApo = 0;
       let hUk = Array(10).fill(0), hFu = Array(10).fill(0), hFz = Array(10).fill(0), hTbk = Array(10).fill(0), hApo = Array(10).fill(0);
-      let dailyStats = {}; // 日別の推移用
+      let dailyStats = {}; 
 
       for (const user in appData) {
           if (uFilter !== "__ALL_USERS__" && user !== uFilter) continue;
@@ -1421,7 +1338,7 @@
       document.getElementById("sa-connect-rate").textContent = totalCalls > 0 ? ((totalConnects / totalCalls) * 100).toFixed(1) + "%" : "0.0%";
       document.getElementById("sa-apo-rate").textContent = totalCalls > 0 ? ((totalApo / totalCalls) * 100).toFixed(1) + "%" : "0.0%";
       
-      // Chart 1: Breakdown
+      // Breakdown Chart
       const ctxBreakdown = document.getElementById('sa-breakdown-chart').getContext('2d');
       if (breakdownChartInstance) breakdownChartInstance.destroy();
       breakdownChartInstance = new Chart(ctxBreakdown, {
@@ -1437,7 +1354,7 @@
           options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
       });
 
-      // Chart 2: Hourly Trend
+      // Hourly Trend Chart
       const ctxHourly = document.getElementById('sa-hourly-chart').getContext('2d');
       if (hourlyChartInstance) hourlyChartInstance.destroy();
       
@@ -1457,7 +1374,7 @@
           options: { maintainAspectRatio: false }
       });
 
-      // Chart 3: Daily Trend
+      // Daily Trend Chart
       const ctxDaily = document.getElementById('sa-daily-chart').getContext('2d');
       if (dailyChartInstance) dailyChartInstance.destroy();
       
@@ -1468,17 +1385,32 @@
       const dApo = sortedDates.map(d => dailyStats[d].apo);
 
       dailyChartInstance = new Chart(ctxDaily, {
-          type: 'line',
+          type: 'bar',
           data: {
               labels: sortedDates.map(d => d.slice(5)), // MM-DD
               datasets: [
-                  { label: '受付BK', data: dUk, borderColor: '#94a3b8', backgroundColor: '#94a3b8', fill: false, tension: 0.3 },
-                  { label: '担当不在', data: dFz, borderColor: '#f87171', backgroundColor: '#f87171', fill: false, tension: 0.3 },
-                  { label: '担当コネクト', data: dConnect, borderColor: '#fbbf24', backgroundColor: '#fbbf24', fill: false, tension: 0.3, borderWidth: 3 },
-                  { label: '★アポ', data: dApo, borderColor: '#14b8a6', backgroundColor: '#14b8a6', fill: false, tension: 0.3, borderWidth: 3 }
+                  { label: '受付BK等', data: dUk, backgroundColor: '#94a3b8' },
+                  { label: '担当不在', data: dFz, backgroundColor: '#f87171' },
+                  { label: '担当コネクト', data: dConnect, backgroundColor: '#fbbf24' }
               ]
           },
-          options: { maintainAspectRatio: false }
+          options: {
+              maintainAspectRatio: false,
+              scales: { x: { stacked: true }, y: { stacked: true } },
+              plugins: {
+                  tooltip: {
+                      callbacks: {
+                          afterLabel: function(context) {
+                              if(context.dataset.label === '担当コネクト') {
+                                  let idx = context.dataIndex;
+                                  return 'うち★アポ: ' + dApo[idx];
+                              }
+                              return '';
+                          }
+                      }
+                  }
+              }
+          }
       });
   }
 
@@ -1584,7 +1516,7 @@
     saveKpiDataToCloud();
     renderKpiTable();
     renderStats();
-    showToast("CSVをインポートしました");
+    showToast("CSVをインポートしました", "#icon-upload");
   }
 
   function renderKpiTable() {
@@ -1714,7 +1646,7 @@
   function saveKpiData() {
       saveKpiDataToCloud();
       renderStats();
-      showToast("KPIデータを保存しました");
+      showToast("KPIデータを保存しました", "#icon-save");
   }
 
   // --- 設定管理 (モーダル) ---
@@ -1746,7 +1678,7 @@
 
     saveData(); 
     renderStats(); 
-    showToast("個人の目標を保存しました");
+    showToast("個人の目標を保存しました", "#icon-save");
   }
 
   function renderSettingsLists() {
@@ -1823,7 +1755,12 @@
     for (let prod in dayObj) {
       const pState = dayObj[prod]; agg.timerSeconds += pState.timerSeconds || 0; 
       for (let i=0; i<10; i++) agg.counts[i] += pState.counts[i] || 0;
-      ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo'].forEach(k => { for(let i=0; i<10; i++) agg.hourly[k][i] += pState.hourly[k][i] || 0; });
+      ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo', 'time'].forEach(k => { 
+          for(let i=0; i<10; i++) {
+              if(!agg.hourly[k]) agg.hourly[k] = Array(10).fill(0);
+              agg.hourly[k][i] += pState.hourly[k]?.[i] || 0; 
+          }
+      });
     }
     return agg;
   }
@@ -1845,8 +1782,14 @@
     if (isRunning) { 
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         if (elapsed > 0) {
-            if (!appData[currentUser][currentDateStr][currentProduct].timerSeconds) appData[currentUser][currentDateStr][currentProduct].timerSeconds = 0;
-            appData[currentUser][currentDateStr][currentProduct].timerSeconds += elapsed;
+            let state = appData[currentUser][currentDateStr][currentProduct];
+            if (!state.timerSeconds) state.timerSeconds = 0;
+            state.timerSeconds += elapsed;
+
+            if (!state.hourly.time) state.hourly.time = Array(10).fill(0);
+            let hIdx = getHourColIdx();
+            state.hourly.time[hIdx] += elapsed;
+
             startTime += elapsed * 1000; 
         }
     }
@@ -1887,6 +1830,90 @@
   // --- 描画処理 (メイン) ---
   function render() { updateTimerDisplay(); renderStats(); }
   
+  function renderHourlyTable() {
+    const hUser = document.getElementById("hourly-user-select").value || currentUser;
+    const hProd = document.getElementById("hourly-product-select").value || currentProduct;
+    const date = currentDateStr;
+
+    let hData = { uketsuke: Array(10).fill(0), futsu: Array(10).fill(0), fuzai: Array(10).fill(0), tantoBK: Array(10).fill(0), apo: Array(10).fill(0), time: Array(10).fill(0) };
+
+    for(const u in appData) {
+        if(hUser !== "__ALL_USERS__" && u !== hUser) continue;
+        if(!appData[u][date]) continue;
+
+        for(const p in appData[u][date]) {
+            if(hProd !== "__ALL_PRODUCTS__" && p !== hProd) continue;
+            let d = appData[u][date][p];
+            if(!d.hourly) continue;
+
+            for(let i=0; i<10; i++) {
+                hData.uketsuke[i] += d.hourly.uketsuke?.[i] || 0;
+                hData.futsu[i] += d.hourly.futsu?.[i] || 0;
+                hData.fuzai[i] += d.hourly.fuzai?.[i] || 0;
+                hData.tantoBK[i] += d.hourly.tantoBK?.[i] || 0;
+                hData.apo[i] += d.hourly.apo?.[i] || 0;
+                hData.time[i] += d.hourly.time?.[i] || 0;
+            }
+        }
+    }
+
+    const tbody = document.getElementById("hourly-table-body");
+    tbody.innerHTML = "";
+
+    const rd = [
+        {l:"受付BK", d:hData.uketsuke}, {l:"不通", d:hData.futsu}, {l:"担当不在", d:hData.fuzai},
+        {l:"担当BK合計", d:hData.tantoBK}, {l:"★アポ獲得", d:hData.apo, s:"row-success"}
+    ];
+
+    rd.forEach(r => {
+        let tr=document.createElement("tr"); if(r.s) tr.className=r.s;
+        let cols = ""; let rowSum = 0;
+        for(let i=0; i<10; i++){ let val = r.d[i]; rowSum += val; cols += `<td>${val}</td>`; }
+        tr.innerHTML=`<td>${r.l}</td>` + cols + `<td style="font-weight:700; background:#f4f6f9;">${rowSum}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    let trTot = document.createElement("tr"), trCph = document.createElement("tr"), trRate = document.createElement("tr"), trTime = document.createElement("tr");
+    trTot.className="row-total"; trTot.innerHTML='<td>時間別架電数</td>'; trCph.innerHTML='<td>架電数 (件/h)</td>'; trRate.innerHTML='<td>コネクト率</td>'; trTime.innerHTML='<td>架電時間 (分)</td>';
+
+    let cH=new Date().getHours(), cM=new Date().getMinutes()||1, isT=(currentDateStr===getTodayString());
+    let gTot = 0, gTime = 0, gConn = 0;
+
+    for(let i=0; i<10; i++){
+        let hc = hData.tantoBK[i] + hData.apo[i];
+        let ht = hData.uketsuke[i] + hData.futsu[i] + hData.fuzai[i] + hc;
+        let time_val = hData.time[i];
+
+        gTot += ht; gTime += time_val; gConn += hc;
+
+        let hp = "0.0";
+        if (time_val > 0) hp = (ht / (time_val / 3600)).toFixed(1);
+        else if (ht > 0) {
+            let th = i+9;
+            if(!isT || i===9 || cH>th) hp = ht.toFixed(1);
+            else if(cH===th) hp = (ht/(cM/60)).toFixed(1);
+        }
+
+        trTot.innerHTML+=`<td>${ht}</td>`;
+        trCph.innerHTML+=`<td>${hp}</td>`;
+        trRate.innerHTML+=`<td>${ht>0?((hc/ht)*100).toFixed(1)+'%':'0.0%'}</td>`;
+        trTime.innerHTML+=`<td>${(time_val/60).toFixed(1)}</td>`;
+    }
+
+    let totalCph = gTime > 0 ? (gTot / (gTime / 3600)).toFixed(1) : "0.0";
+    let totalRate = gTot > 0 ? ((gConn / gTot)*100).toFixed(1) + "%" : "0.0%";
+
+    trTot.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${gTot}</td>`;
+    trCph.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${totalCph}</td>`;
+    trRate.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${totalRate}</td>`;
+    trTime.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${(gTime/60).toFixed(1)}</td>`;
+
+    tbody.appendChild(trTot);
+    tbody.appendChild(trTime);
+    tbody.appendChild(trCph);
+    tbody.appendChild(trRate);
+  }
+
   function renderStats() {
     if (document.getElementById("page-counter").style.display === "none") return;
     
@@ -1919,62 +1946,34 @@
 
     let tApoVal = state.targetApo || 1;
     let prog = tApoVal>0?Math.min(100,(apo/tApoVal)*100):0;
-    document.getElementById("apo-progress-bar").style.width=prog+"%"; document.getElementById("apo-progress-text").textContent=`${prog.toFixed(0)}% (${apo}/${tApoVal})`;
     
+    const pBar = document.getElementById("apo-progress-bar");
+    const pText = document.getElementById("apo-progress-text");
+    pBar.style.width = Math.min(prog, 100) + "%";
+    
+    if (prog >= 100) {
+        pBar.style.backgroundColor = "var(--success)";
+        pText.innerHTML = `<span style="color:var(--success); font-weight:bold;"><svg class="icon"><use href="#icon-star"></use></svg> 目標達成! (${apo}/${tApoVal})</span>`;
+    } else {
+        pBar.style.backgroundColor = "var(--accent)";
+        pText.textContent = `${prog.toFixed(0)}% (${apo}/${tApoVal})`;
+    }
+
     const cphDisp = document.getElementById("cph-current-display"); 
-    cphDisp.textContent=cphStr; 
-    cphDisp.style.color = (state.targetCph > 0 && cphNum >= state.targetCph) ? "var(--success)" : "var(--danger)";
+    cphDisp.textContent = cphStr; 
+    document.getElementById("cph-target-display").textContent = (state.targetCph || 0).toFixed(1);
+    
+    if (state.targetCph > 0 && cphNum >= state.targetCph) {
+        cphDisp.style.color = "var(--success)";
+        document.getElementById("cph-achieved-badge").style.display = "inline-block";
+    } else {
+        cphDisp.style.color = "var(--danger)";
+        document.getElementById("cph-achieved-badge").style.display = "none";
+    }
+
     document.getElementById("kpi-cpa").textContent = apo>0 ? (tot/apo).toFixed(1)+" 件" : "-";
 
-    const tbody = document.getElementById("hourly-table-body"); 
-    tbody.innerHTML = "";
-    
-    const rd = [
-      {l:"受付BK", d:state.hourly?.uketsuke || []}, 
-      {l:"不通", d:state.hourly?.futsu || []}, 
-      {l:"担当不在", d:state.hourly?.fuzai || []}, 
-      {l:"担当BK合計", d:state.hourly?.tantoBK || []}, 
-      {l:"★アポ獲得", d:state.hourly?.apo || [], s:"row-success"}
-    ];
-    
-    rd.forEach(r => { 
-      let tr=document.createElement("tr"); 
-      if(r.s) tr.className=r.s; 
-      let cols = ""; let rowSum = 0;
-      for(let i=0; i<10; i++){ 
-        let val = (r.d && r.d[i]) ? r.d[i] : 0; rowSum += val; cols += `<td>${val}</td>`; 
-      }
-      tr.innerHTML=`<td>${r.l}</td>` + cols + `<td style="font-weight:700; background:#f4f6f9;">${rowSum}</td>`; 
-      tbody.appendChild(tr); 
-    });
-
-    let trTot = document.createElement("tr"), trCph = document.createElement("tr"), trRate = document.createElement("tr"); 
-    trTot.className="row-total"; trTot.innerHTML='<td>時間別架電数</td>'; trCph.innerHTML='<td>架電数 (件/h)</td>'; trRate.innerHTML='<td>コネクト率</td>';
-    
-    let cH=new Date().getHours(), cM=new Date().getMinutes()||1, isT=(currentDateStr===getTodayString());
-    let gTot = 0;
-
-    for(let i=0; i<10; i++){
-      let apo_val = state.hourly?.apo?.[i] || 0;
-      let tbk_val = state.hourly?.tantoBK?.[i] || 0;
-      let uk_val = state.hourly?.uketsuke?.[i] || 0;
-      let fu_val = state.hourly?.futsu?.[i] || 0;
-      let fz_val = state.hourly?.fuzai?.[i] || 0;
-
-      let hc = tbk_val + apo_val;
-      let ht = uk_val + fu_val + fz_val + hc;
-      gTot += ht;
-      let th = i+9, hp = "0.0";
-      
-      if(!isT || i===9 || cH>th) hp=ht.toFixed(1); 
-      else if(cH===th) hp=(ht/(cM/60)).toFixed(1);
-
-      trTot.innerHTML+=`<td>${ht}</td>`; trCph.innerHTML+=`<td>${hp}</td>`; trRate.innerHTML+=`<td>${ht>0?((hc/ht)*100).toFixed(1)+'%':'0.0%'}</td>`;
-    }
-    
-    trTot.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${gTot}</td>`; trCph.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${cphStr}</td>`; trRate.innerHTML+=`<td style="font-weight:700; background:#e2e8f0;">${brk}%</td>`;
-    tbody.appendChild(trTot); tbody.appendChild(trCph); tbody.appendChild(trRate);
-
+    renderHourlyTable();
     updateRankings();
   }
 
@@ -2020,15 +2019,16 @@
     const newCphRank = [...stats].sort((a, b) => b.cph - a.cph);
 
     // --- ランキング変動の検知とトースト通知 ---
-    if (!isInitialLoad && prevRankingState.apo.length > 0) {
+    if (!isInitialLoad && prevRankingState.cph && prevRankingState.cph.length > 0) {
         for (let i = 0; i < 3; i++) {
-            if (newApoRank[i] && prevRankingState.apo[i]) {
-                if (newApoRank[i].name !== prevRankingState.apo[i].name && newApoRank[i].apo > 0) {
-                    showToast(`🏆 アポ獲得数 ${i+1}位が ${newApoRank[i].name} さんに変動しました！`);
+            if (newCphRank[i] && prevRankingState.cph[i]) {
+                if (newCphRank[i].name !== prevRankingState.cph[i].name && newCphRank[i].cph > 0) {
+                    showToast(`架電ペース ${i+1}位が ${newCphRank[i].name} さんに変動しました！`, "#icon-trend");
                 }
             }
         }
     }
+    
     prevRankingState.apo = newApoRank.map(s => ({name: s.name, apo: s.apo}));
     prevRankingState.cph = newCphRank.map(s => ({name: s.name, cph: s.cph}));
 
