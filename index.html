@@ -392,6 +392,9 @@
             </div>
           </div>
           <div class="action-btns">
+            <button class="btn btn-outline" onclick="openTemplateModal()">
+              <svg class="icon"><use href="#icon-message"></use></svg> 進捗報告テンプレ
+            </button>
             <button class="btn btn-outline" onclick="copyForReview()">
               <svg class="icon"><use href="#icon-doc"></use></svg> 振り返りコピー
             </button>
@@ -774,6 +777,22 @@
   </div>
 </div>
 
+<!-- ================= モーダル (進捗テンプレ) ================= -->
+<div id="template-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2><svg class="icon"><use href="#icon-message"></use></svg> 進捗報告テンプレ</h2>
+      <button class="btn-close" onclick="closeTemplateModal()"><svg class="icon" style="width:24px; height:24px;"><use href="#icon-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <textarea id="template-textarea" style="width:100%; height:300px; resize:vertical; padding:10px; font-family:inherit; border:1px solid var(--border); border-radius:4px; font-size:13px;"></textarea>
+      <div style="text-align:right; margin-top:15px;">
+        <button class="btn btn-primary" onclick="copyTemplate()"><svg class="icon"><use href="#icon-doc"></use></svg> コピーする</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // =========================================================
   // ★ Firebase 設定
@@ -798,7 +817,7 @@
     { name: "★アポ獲得", id: 9, cls: "apo-box" }
   ];
 
-  let usersList = []; let productsList = [];
+  let usersList = []; let productsList = []; let productSettings = {};
   let currentUser = ""; let currentDateStr = ""; let currentProduct = "";
   let appData = {}; 
   let timerInterval = null; let startTime = 0; let isRunning = false;
@@ -837,7 +856,7 @@
           fuzai: Array(10).fill(0), 
           tantoBK: Array(10).fill(0), 
           apo: Array(10).fill(0),
-          time: Array(10).fill(0) // 新設: 架電時間
+          time: Array(10).fill(0)
       },
       timerSeconds: 0, targetQualitative: "", targetApo: 3, targetCph: 20
     };
@@ -851,6 +870,7 @@
     document.getElementById("sync-status").innerHTML = `<span style="width:8px; height:8px; background:var(--warning); border-radius:50%; display:inline-block;"></span> ローカル`;
     usersList = JSON.parse(localStorage.getItem("kaden_users_list")) || [...defaultUsers];
     productsList = JSON.parse(localStorage.getItem("kaden_products_list")) || [...defaultProducts];
+    productSettings = JSON.parse(localStorage.getItem("kaden_product_settings")) || { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
     const savedData = localStorage.getItem("kaden_app_data_v4");
     if (savedData) appData = JSON.parse(savedData);
     scriptData.team = JSON.parse(localStorage.getItem("kaden_team_scripts")) || {};
@@ -886,10 +906,12 @@
           const data = doc.data();
           usersList = data.users || [...defaultUsers];
           productsList = data.products || [...defaultProducts];
+          productSettings = data.productSettings || { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
           scriptData.team = data.scripts || {};
         } else {
           usersList = [...defaultUsers]; productsList = [...defaultProducts];
-          db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, scripts: {} });
+          productSettings = { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
+          db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, scripts: {} });
         }
         updateSelectUIs();
         if(document.getElementById("page-script").style.display === "flex") renderScriptContent();
@@ -904,7 +926,7 @@
             let newApo = calcApoFromDayData(d.data);
             if (!isInitialLoad && prevApoCounts[d.user] !== undefined && newApo > prevApoCounts[d.user]) {
               let diff = newApo - prevApoCounts[d.user];
-              for(let i=0; i<diff; i++){
+              for(let i=0; i<Math.floor(diff); i++){
                   if (d.user === currentUser) showToast(`ナイスアポ！ あなたがアポを獲得しました`, "#icon-star");
                   else showToast(`${d.user} さんがアポを獲得しました`, "#icon-star");
               }
@@ -1029,7 +1051,6 @@
     pSel.add(new Option("【全商材まとめ (閲覧のみ)】", ALL_PRODUCTS_KEY));
     productsList.forEach(p => pSel.add(new Option(p, p))); pSel.value = currentProduct;
 
-    // 時間帯テーブル用フィルター
     const huSel = document.getElementById("hourly-user-select");
     const curHu = huSel.value || currentUser;
     huSel.innerHTML = '<option value="__ALL_USERS__">【チーム全体】</option>';
@@ -1535,6 +1556,22 @@
     
     let totalTarget = currentData.target || 0;
     let totalExpected = 0; let totalActual = 0;
+
+    // 当月のアポ数を appData から取得して実績(ac)に自動反映
+    usersList.forEach(u => {
+        let uData = currentData.users[u] || { target: 0, daily: {} };
+        for(let d=1; d<=daysInMonth; d++){
+            let dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            let dayApo = 0;
+            if(appData[u] && appData[u][dateStr]) {
+                 for(let p in appData[u][dateStr]) {
+                      dayApo += (appData[u][dateStr][p].counts[9] || 0);
+                 }
+            }
+            if(!uData.daily[d]) uData.daily[d] = {s:"", e:"", ex:"", ac:""};
+            uData.daily[d].ac = dayApo || uData.daily[d].ac || 0;
+        }
+    });
     
     usersList.forEach(u => {
         let uData = currentData.users[u] || { target: 0, daily: {} };
@@ -1550,7 +1587,7 @@
     
     let headHtml = `<tr>
         <th class="sticky-col" rowspan="2" style="width:120px;">メンバー</th>
-        <th rowspan="2" style="width:60px;">全体目標<br><input type="number" class="kpi-input" style="font-size:14px; font-weight:bold; color:var(--accent); width:50px; background:#fff;" value="${totalTarget}" onchange="updateKpiGlobalTarget(this.value)"></th>
+        <th rowspan="2" style="width:60px;">全体目標<br><input type="number" step="0.5" class="kpi-input" style="font-size:14px; font-weight:bold; color:var(--accent); width:50px; background:#fff;" value="${totalTarget}" onchange="updateKpiGlobalTarget(this.value)"></th>
         <th rowspan="2" style="width:60px;">全体予想<br><span style="font-size:14px;">${totalExpected.toFixed(1)}</span></th>
         <th rowspan="2" style="width:60px;">全体実績<br><span style="font-size:14px;">${totalActual.toFixed(1)}</span></th>
         <th rowspan="2" style="width:60px; border-right:2px solid var(--border);">進捗<br><span style="font-size:14px; color:${prog>=100?'var(--success)':'var(--danger)'}">${prog}%</span></th>
@@ -1583,7 +1620,7 @@
         
         bodyHtml += `<tr>
             <td class="sticky-col" style="font-weight:600;">${u}</td>
-            <td><input type="number" class="kpi-input" value="${uData.target || 0}" onchange="updateKpiUserTarget('${u}', this.value)"></td>
+            <td><input type="number" step="0.5" class="kpi-input" value="${uData.target || 0}" onchange="updateKpiUserTarget('${u}', this.value)"></td>
             <td style="background:#f1f5f9;">${uExp.toFixed(1)}</td>
             <td style="background:#f1f5f9;">${uAct.toFixed(1)}</td>
             <td style="border-right:2px solid var(--border); background:#f1f5f9;"></td>
@@ -1594,8 +1631,8 @@
             bodyHtml += `
                 <td style="border-left:2px solid #cbd5e1; background:${bg};"><input type="text" class="kpi-input time" value="${dData.s||''}" onchange="updateKpiDaily('${u}', ${d}, 's', this.value)"></td>
                 <td style="background:${bg};"><input type="text" class="kpi-input time" value="${dData.e||''}" onchange="updateKpiDaily('${u}', ${d}, 'e', this.value)"></td>
-                <td style="background:${bg};"><input type="number" class="kpi-input" value="${dData.ex!==undefined?dData.ex:''}" onchange="updateKpiDaily('${u}', ${d}, 'ex', this.value)"></td>
-                <td style="background:${bg};"><input type="number" class="kpi-input" value="${dData.ac!==undefined?dData.ac:''}" onchange="updateKpiDaily('${u}', ${d}, 'ac', this.value)"></td>
+                <td style="background:${bg};"><input type="number" step="0.5" class="kpi-input" value="${dData.ex!==undefined?dData.ex:''}" onchange="updateKpiDaily('${u}', ${d}, 'ex', this.value)"></td>
+                <td style="background:${bg};"><input type="number" step="0.5" class="kpi-input" value="${dData.ac!==undefined?dData.ac:''}" onchange="updateKpiDaily('${u}', ${d}, 'ac', this.value)"></td>
             `;
         }
         bodyHtml += `</tr>`;
@@ -1681,16 +1718,31 @@
     showToast("個人の目標を保存しました", "#icon-save");
   }
 
+  function toggleProductStep(p, isHalf) {
+    if(!productSettings[p]) productSettings[p] = {};
+    productSettings[p].step = isHalf ? 0.5 : 1;
+    saveSettingsConfig();
+  }
+
   function renderSettingsLists() {
     const uList = document.getElementById("settings-users-list"); uList.innerHTML = "";
     usersList.forEach(u => uList.innerHTML += `<li>${u} <button class="btn-del" onclick="deleteUser('${u}')">削除</button></li>`);
     const pList = document.getElementById("settings-products-list"); pList.innerHTML = "";
-    productsList.forEach(p => pList.innerHTML += `<li>${p} <button class="btn-del" onclick="deleteProduct('${p}')">削除</button></li>`);
+    productsList.forEach(p => {
+        let isHalf = productSettings[p] && productSettings[p].step === 0.5;
+        pList.innerHTML += `<li>
+            <span>${p}</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <label style="font-size:11px;"><input type="checkbox" onchange="toggleProductStep('${p}', this.checked)" ${isHalf ? "checked" : ""}> 0.5刻み</label>
+                <button class="btn-del" onclick="deleteProduct('${p}')">削除</button>
+            </div>
+        </li>`;
+    });
   }
   
   function saveSettingsConfig() {
-    if(db) db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList }, {merge: true});
-    else { localStorage.setItem("kaden_users_list", JSON.stringify(usersList)); localStorage.setItem("kaden_products_list", JSON.stringify(productsList)); }
+    if(db) db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings }, {merge: true});
+    else { localStorage.setItem("kaden_users_list", JSON.stringify(usersList)); localStorage.setItem("kaden_products_list", JSON.stringify(productsList)); localStorage.setItem("kaden_product_settings", JSON.stringify(productSettings)); }
   }
   function addUser() {
     const val = document.getElementById("new-user-input").value.trim();
@@ -1814,9 +1866,18 @@
   function changeValue(id, delta) {
     if (currentProduct === ALL_PRODUCTS_KEY) return; 
     let state = appData[currentUser][currentDateStr][currentProduct];
-    let oldVal = state.counts[id]; let newVal = Math.max(0, oldVal + delta); if (oldVal === newVal) return;
+    
+    let step = 1;
+    if (id === 9 && productSettings[currentProduct] && productSettings[currentProduct].step === 0.5) {
+        step = 0.5;
+    }
+    let actualDelta = delta > 0 ? step : -step;
+
+    let oldVal = state.counts[id] || 0; 
+    let newVal = Math.max(0, oldVal + actualDelta); 
+    if (oldVal === newVal) return;
     state.counts[id] = newVal; const c = getHourColIdx();
-    if(id===0) state.hourly.uketsuke[c] = Math.max(0, state.hourly.uketsuke[c]+delta); else if(id===1) state.hourly.futsu[c] = Math.max(0, state.hourly.futsu[c]+delta); else if(id===2) state.hourly.fuzai[c] = Math.max(0, state.hourly.fuzai[c]+delta); else if(id>=3 && id<=8) state.hourly.tantoBK[c] = Math.max(0, state.hourly.tantoBK[c]+delta); else if(id===9) state.hourly.apo[c] = Math.max(0, state.hourly.apo[c]+delta);
+    if(id===0) state.hourly.uketsuke[c] = Math.max(0, state.hourly.uketsuke[c]+actualDelta); else if(id===1) state.hourly.futsu[c] = Math.max(0, state.hourly.futsu[c]+actualDelta); else if(id===2) state.hourly.fuzai[c] = Math.max(0, state.hourly.fuzai[c]+actualDelta); else if(id>=3 && id<=8) state.hourly.tantoBK[c] = Math.max(0, state.hourly.tantoBK[c]+actualDelta); else if(id===9) state.hourly.apo[c] = Math.max(0, state.hourly.apo[c]+actualDelta);
     saveData(); render();
   }
 
@@ -1825,6 +1886,69 @@
     if (index === 1) return `<span class="medal medal-2">2</span>`;
     if (index === 2) return `<span class="medal medal-3">3</span>`;
     return `<span class="medal medal-other">${index + 1}</span>`;
+  }
+
+  // --- 進捗テンプレ処理 ---
+  function openTemplateModal() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const mKey = `${year}-${String(month).padStart(2, '0')}`;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    let currentData = kpiData[mKey] || { target: 0, users: {} };
+    let totalTarget = currentData.target || 0;
+    let totalActual = 0;
+    let userStats = [];
+
+    usersList.forEach(u => {
+      let uData = currentData.users[u] || { target: 0, daily: {} };
+      let uTarget = uData.target || 0;
+      let uAct = 0;
+      
+      // 今月の最新実績をアプリ内の生データ(appData)から計算
+      for(let d=1; d<=daysInMonth; d++) {
+          let dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          let dayApo = 0;
+          if(appData[u] && appData[u][dateStr]) {
+               for(let p in appData[u][dateStr]) {
+                    dayApo += (appData[u][dateStr][p].counts[9] || 0);
+               }
+          }
+          // 実績がない場合は手入力のacを使用する
+          let manualAc = (uData.daily && uData.daily[d]) ? parseFloat(uData.daily[d].ac) || 0 : 0;
+          uAct += (dayApo || manualAc);
+      }
+      
+      totalActual += uAct;
+      
+      // 月間目標が設定されている、または実績があるメンバーのみ出力
+      if (uTarget > 0 || uAct > 0) {
+          userStats.push({ name: u, act: uAct, target: uTarget });
+      }
+    });
+    
+    let totalActStr = totalActual % 1 !== 0 ? totalActual.toFixed(1) : totalActual;
+    let text = `@All\nここまでの進捗！！\n\n全体進捗  ${totalActStr}/${totalTarget}\n\n`;
+    
+    userStats.forEach(s => {
+        let actStr = s.act % 1 !== 0 ? s.act.toFixed(1) : s.act;
+        text += `${s.name}  ${actStr}/${s.target}\n`;
+    });
+    
+    text += `\n[ここに名指しの称賛やコメントを入力]\n\n今月もしっかり進捗を積んでおきたい週です！\n目標達成を目指して、チーム一丸で頑張っていこう！`;
+    
+    document.getElementById("template-textarea").value = text;
+    document.getElementById("template-modal").style.display = "flex";
+  }
+
+  function closeTemplateModal() { document.getElementById("template-modal").style.display = "none"; }
+  function copyTemplate() {
+    let text = document.getElementById("template-textarea").value;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast("進捗報告テンプレをコピーしました", "#icon-doc");
+        closeTemplateModal();
+    });
   }
 
   // --- 描画処理 (メイン) ---
@@ -1921,7 +2045,10 @@
     
     items.forEach(item => {
       const el = document.getElementById(`panel-val-${item.id}`);
-      if(el) el.textContent = state.counts[item.id] || 0;
+      if(el) {
+          let val = state.counts[item.id] || 0;
+          el.textContent = (item.id === 9 && val % 1 !== 0) ? val.toFixed(1) : val;
+      }
     });
 
     let uk = state.counts[0]||0, fu = state.counts[1]||0, fuz = state.counts[2]||0;
@@ -2106,7 +2233,7 @@
       let d=res[k], c=d.c, t=d.t, uk=c[0], fu=c[1], fuz=c[2], tbk=c[3]+c[4]+c[5]+c[6]+c[7]+c[8], apo=c[9], hc=tbk+apo, tot=uk+fu+fuz+hc;
       if(tot===0 && t===0) return;
       let tr=document.createElement("tr");
-      tr.innerHTML=`<td style="font-weight:600; color:var(--accent); text-align:left;">${k}</td><td>${(t/3600).toFixed(1)}</td><td style="font-weight:700;">${tot}</td><td>${uk}</td><td>${fu}</td><td>${fuz}</td><td>${tbk}</td><td style="color:var(--danger); font-weight:700;">${apo}</td><td>${tot>0?((hc/tot)*100).toFixed(1):'0.0'}%</td><td>${tot>0?((apo/tot)*100).toFixed(1):'0.0'}%</td><td>${hc>0?((apo/hc)*100).toFixed(1):'0.0'}%</td><td style="background:#f4f6f9; font-weight:700;">${t>0?(t/3600).toFixed(1):'0.0'}</td>`;
+      tr.innerHTML=`<td style="font-weight:600; color:var(--accent); text-align:left;">${k}</td><td>${(t/3600).toFixed(1)}</td><td style="font-weight:700;">${tot}</td><td>${uk}</td><td>${fu}</td><td>${fuz}</td><td>${tbk}</td><td style="color:var(--danger); font-weight:700;">${apo}</td><td>${tot>0?((hc/tot)*100).toFixed(1):'0.0'}%</td><td>${tot>0?((apo/tot)*100).toFixed(1):'0.0'}%</td><td>${hc>0?((apo/hc)*100).toFixed(1):'0.0'}%</td><td style="background:#f4f6f9; font-weight:700;">${t>0?(tot/(t/3600)).toFixed(1):'0.0'}</td>`;
       tb.appendChild(tr);
     });
   }
