@@ -1,0 +1,12 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for call-system AI weakness analysis proxy",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-functions": "^5.0.0"
+  },
+  "private": true
+}
