@@ -244,6 +244,47 @@
     /* チャートコンテナ */
     .chart-container { position: relative; height: 250px; width: 100%; }
 
+    /* =========================================
+       フローティング小窓モード (最小化)
+    ========================================= */
+    .mini-widget {
+      position: fixed;
+      width: 260px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.35), 0 4px 6px -2px rgba(0,0,0,0.15);
+      border: 1px solid var(--border);
+      z-index: 9500;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .mini-widget.show { display: flex; }
+    .mini-widget-header {
+      background: var(--sidebar-bg); color: #fff; padding: 8px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: move; font-size: 12px; font-weight: 700; user-select: none;
+    }
+    .mini-widget-header .mini-title { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-widget-header .icon { flex-shrink: 0; }
+    .mini-widget-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .mini-timer { text-align: center; font-size: 22px; font-weight: 700; color: var(--text-main); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 1px; }
+    .mini-timer-controls { display: flex; justify-content: center; gap: 8px; }
+    .mini-timer-controls button.btn-icon-only { width: 28px; height: 28px; }
+    .mini-timer-controls button.btn-icon-only .icon { width: 14px; height: 14px; }
+    .mini-counter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 230px; overflow-y: auto; }
+    .mini-counter-item { display: flex; flex-direction: column; align-items: center; border: 1px solid var(--border); border-radius: 4px; padding: 5px 3px; background: #f8fafc; }
+    .mini-counter-item.apo-box { background: #f0fdf4; border-color: #86efac; }
+    .mini-counter-item .mc-label { font-size: 10px; color: var(--text-muted); font-weight: 600; text-align: center; margin-bottom: 3px; line-height: 1.2; }
+    .mini-counter-item .mc-stepper { display: flex; align-items: center; gap: 4px; }
+    .mini-counter-item .mc-stepper button { width: 20px; height: 20px; border: none; background: #e2e8f0; border-radius: 3px; font-size: 12px; font-weight: bold; cursor: pointer; color: var(--text-main); line-height: 1; }
+    .mini-counter-item .mc-stepper button:hover { background: #cbd5e1; }
+    .mini-counter-item .mc-stepper .mc-val { font-size: 12px; font-weight: 700; min-width: 22px; text-align: center; }
+    .mini-disabled-msg { text-align: center; font-size: 11px; color: var(--danger); padding: 15px 5px; font-weight: 600; }
+
+    /* AI分析パネル */
+    .ai-analysis-box { font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text-main); background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; min-height: 60px; }
+
   </style>
 </head>
 <body>
@@ -262,6 +303,8 @@
   <symbol id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 20.04c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd" /></symbol>
   <symbol id="icon-pause" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" /></symbol>
   <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></symbol>
+  <symbol id="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></symbol>
+  <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 3l1.2 3.6L14.3 8l-3.6 1.2L9.5 12.8 8.3 9.2 4.7 8l3.6-1.4L9.5 3zM18 13l.8 2.4L21.2 16.2l-2.4.8L18 19.4l-.8-2.4-2.4-.8 2.4-.8L18 13z" /></symbol>
   <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></symbol>
   <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="2" x2="16" y2="6" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="2" x2="8" y2="6" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="10" x2="21" y2="10" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="icon-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><polyline stroke-linecap="round" stroke-linejoin="round" points="3.27 6.96 12 12.01 20.73 6.96" /><line stroke-linecap="round" stroke-linejoin="round" x1="12" y1="22.08" x2="12" y2="12" /></symbol>
@@ -350,6 +393,9 @@
           <span id="current-user-display">ゲスト</span>
         </div>
 
+        <button class="btn-settings-top" onclick="toggleMiniMode()" title="小さなウィンドウで表示（最小化）">
+          <svg class="icon" style="margin:0;"><use href="#icon-minimize"></use></svg>
+        </button>
         <button class="btn-settings-top" onclick="logout()" title="ログアウト">
           <svg class="icon" style="margin:0;"><use href="#icon-logout"></use></svg>
         </button>
@@ -722,6 +768,18 @@
                 </div>
             </div>
         </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span style="display:flex; align-items:center; gap:8px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-sparkles"></use></svg> AI分析（苦手傾向と改善方法）</span>
+            <button class="btn btn-primary" id="btn-ai-analyze" onclick="runAiAnalysis()">
+              <svg class="icon"><use href="#icon-sparkles"></use></svg> AIで分析する
+            </button>
+          </div>
+          <div class="card-body">
+            <div id="ai-analysis-result" class="ai-analysis-box">上のフィルター（アカウント・商材・期間）を選択し「AIで分析する」を押すと、AIがこの担当者の架電プロセス上の苦手な工程と改善方法を分析します。</div>
+          </div>
+        </div>
       </div>
 
       <!-- =================【タブ6: チームランキング画面】================= -->
@@ -753,6 +811,31 @@
 
     </div>
   </main>
+</div>
+
+<!-- ================= フローティング小窓 (最小化モード) ================= -->
+<div class="mini-widget" id="mini-widget">
+  <div class="mini-widget-header" id="mini-widget-header">
+    <span class="mini-title">
+      <svg class="icon" style="width:14px; height:14px;"><use href="#icon-phone"></use></svg>
+      <span id="mini-user-product">-</span>
+    </span>
+    <button class="btn-icon-only" style="width:22px; height:22px; background:transparent; color:#fff;" onclick="toggleMiniMode()" title="元の画面に戻る">
+      <svg class="icon" style="width:14px; height:14px; margin:0;"><use href="#icon-x"></use></svg>
+    </button>
+  </div>
+  <div class="mini-widget-body">
+    <div id="mini-disabled-msg" class="mini-disabled-msg" style="display:none;">※全商材まとめ閲覧モードのため操作できません</div>
+    <div id="mini-active-area">
+      <div class="mini-timer" id="mini-display-time">00:00:00</div>
+      <div class="mini-timer-controls">
+        <button class="btn btn-primary btn-icon-only" onclick="startTimer()" title="開始"><svg class="icon"><use href="#icon-play"></use></svg></button>
+        <button class="btn btn-outline btn-icon-only" style="background:#f59e0b; color:#fff; border:none;" onclick="stopTimer()" title="停止"><svg class="icon"><use href="#icon-pause"></use></svg></button>
+        <button class="btn btn-outline btn-icon-only" onclick="resetTimer()" title="クリア"><svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg></button>
+      </div>
+      <div class="mini-counter-grid" id="mini-counter-grid"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ================= モーダル (設定) ================= -->
@@ -806,6 +889,11 @@
     appId: "1:226536822996:web:7e737b2a0a20a8447cc341"
   };
 
+  // ★ AI分析（苦手傾向と改善方法）用 Cloud Function のエンドポイントURL。
+  // functions/README.md の手順でデプロイした後、発行されたURLをここに設定してください。
+  // AIのAPIキーはこの関数内（サーバー側）にのみ保持され、ブラウザには一切渡りません。
+  const AI_ANALYZE_FUNCTION_URL = "";
+
   const defaultUsers = ["新田 健介", "伊藤 篤永", "坂田 蘭", "岡本 匠平", "内田 翼太", "今泉 尚大", "宮崎 駿斗", "佐藤 健", "吉田 悠生", "迎 莉央", "林 真志", "前田 浩明"];
   const defaultProducts = ["Bill One", "Bill One経費", "Sansan", "YOMEL", "bakuraku発行", "bakuraku受領", "LAWGUE", "eigthteam"];
   const ALL_PRODUCTS_KEY = "__ALL__";
@@ -836,6 +924,9 @@
   let breakdownChartInstance = null;
   let hourlyChartInstance = null;
   let dailyChartInstance = null;
+
+  let isMiniMode = false;
+  let miniDragOffset = null;
 
   function getTodayString() {
     const d = new Date();
@@ -1016,6 +1107,7 @@
     if (isRunning) stopTimer();
     currentUser = "";
     if(personalScriptUnsubscribe) { personalScriptUnsubscribe(); personalScriptUnsubscribe = null; }
+    if (isMiniMode) { isMiniMode = false; document.getElementById("mini-widget").classList.remove("show"); }
     document.getElementById("main-app").style.display = "none";
     setupLogin();
   }
@@ -1106,6 +1198,100 @@
         </div>
       `;
       grid.appendChild(div);
+    });
+  }
+
+  // --- フローティング小窓モード（最小化） ---
+  function toggleMiniMode() {
+    isMiniMode = !isMiniMode;
+    const widget = document.getElementById('mini-widget');
+    if (isMiniMode) {
+      document.getElementById('main-app').style.display = 'none';
+      widget.classList.add('show');
+      applyMiniPosition();
+      buildMiniControlPanel();
+      renderMini();
+    } else {
+      widget.classList.remove('show');
+      document.getElementById('main-app').style.display = 'flex';
+    }
+  }
+
+  function applyMiniPosition() {
+    const widget = document.getElementById('mini-widget');
+    let pos = null;
+    try { pos = JSON.parse(localStorage.getItem('kaden_mini_pos')); } catch (e) {}
+    widget.style.right = ''; widget.style.bottom = '';
+    if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
+      widget.style.left = Math.min(Math.max(0, pos.left), window.innerWidth - 60) + 'px';
+      widget.style.top = Math.min(Math.max(0, pos.top), window.innerHeight - 60) + 'px';
+    } else {
+      widget.style.left = (window.innerWidth - 280) + 'px';
+      widget.style.top = (window.innerHeight - 400) + 'px';
+    }
+  }
+
+  function initMiniDrag() {
+    const header = document.getElementById('mini-widget-header');
+    const widget = document.getElementById('mini-widget');
+    header.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) return;
+      const rect = widget.getBoundingClientRect();
+      miniDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!miniDragOffset) return;
+      let left = e.clientX - miniDragOffset.x;
+      let top = e.clientY - miniDragOffset.y;
+      left = Math.min(Math.max(0, left), window.innerWidth - widget.offsetWidth);
+      top = Math.min(Math.max(0, top), window.innerHeight - widget.offsetHeight);
+      widget.style.right = ''; widget.style.bottom = '';
+      widget.style.left = left + 'px';
+      widget.style.top = top + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+      if (!miniDragOffset) return;
+      miniDragOffset = null;
+      const rect = widget.getBoundingClientRect();
+      localStorage.setItem('kaden_mini_pos', JSON.stringify({ left: rect.left, top: rect.top }));
+    });
+  }
+
+  function buildMiniControlPanel() {
+    const grid = document.getElementById('mini-counter-grid');
+    grid.innerHTML = '';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = `mini-counter-item ${item.cls || ''}`;
+      div.innerHTML = `
+        <span class="mc-label">${item.name}</span>
+        <div class="mc-stepper">
+          <button onclick="changeValue(${item.id}, -1)">−</button>
+          <span class="mc-val" id="mini-val-${item.id}">0</span>
+          <button onclick="changeValue(${item.id}, 1)">＋</button>
+        </div>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  function renderMini() {
+    if (!isMiniMode) return;
+    const isAll = currentProduct === ALL_PRODUCTS_KEY;
+    document.getElementById('mini-user-product').textContent = `${currentUser} / ${isAll ? '全商材(閲覧)' : currentProduct}`;
+    document.getElementById('mini-disabled-msg').style.display = isAll ? 'block' : 'none';
+    document.getElementById('mini-active-area').style.display = isAll ? 'none' : 'block';
+    if (isAll) return;
+
+    document.getElementById('mini-display-time').textContent = document.getElementById('display-time').textContent;
+    const state = getActiveState();
+    items.forEach(item => {
+      const el = document.getElementById(`mini-val-${item.id}`);
+      if (el) {
+        let val = state.counts[item.id] || 0;
+        el.textContent = (item.id === 9 && val % 1 !== 0) ? val.toFixed(1) : val;
+      }
     });
   }
 
@@ -1433,6 +1619,95 @@
               }
           }
       });
+  }
+
+  // --- AI分析（苦手傾向と改善方法） ---
+  function collectStatusStatsForAI() {
+    const uFilter = document.getElementById("sa-user-select").value;
+    const pFilter = document.getElementById("sa-product-select").value;
+    const sD = document.getElementById("sa-start-date").value;
+    const eD = document.getElementById("sa-end-date").value;
+
+    let sub = Array(6).fill(0); // items[3..8]: 目的/メリット(機能)/メリット(ベネ)/断りづらい/クロージング/カウンター
+    let totalUk = 0, totalFu = 0, totalFz = 0, totalApo = 0;
+    let dayCount = 0;
+
+    for (const user in appData) {
+      if (uFilter !== "__ALL_USERS__" && user !== uFilter) continue;
+      for (const date in appData[user]) {
+        if (sD && date < sD) continue;
+        if (eD && date > eD) continue;
+        let hasDay = false;
+        for (const p in appData[user][date]) {
+          if (pFilter !== "__ALL_PRODUCTS__" && p !== pFilter) continue;
+          const c = appData[user][date][p].counts || Array(10).fill(0);
+          totalUk += c[0] || 0; totalFu += c[1] || 0; totalFz += c[2] || 0; totalApo += c[9] || 0;
+          for (let i = 0; i < 6; i++) sub[i] += c[3 + i] || 0;
+          hasDay = true;
+        }
+        if (hasDay) dayCount++;
+      }
+    }
+
+    const tbkTotal = sub.reduce((a, b) => a + b, 0);
+    const totalConnect = tbkTotal + totalApo;
+    const totalCalls = totalUk + totalFu + totalFz + totalConnect;
+
+    const subLabels = ["目的訴求", "メリット訴求(機能)", "メリット訴求(ベネフィット)", "断り文句への切り返し", "クロージング", "カウンター対応"];
+    const stepBreakdown = subLabels.map((label, i) => ({
+      step: label,
+      count: sub[i],
+      ratioOfConnect: totalConnect > 0 ? +((sub[i] / totalConnect) * 100).toFixed(1) : 0
+    }));
+
+    return {
+      totalCalls, totalUk, totalFu, totalFz, totalConnect, totalApo,
+      connectRate: totalCalls > 0 ? +((totalConnect / totalCalls) * 100).toFixed(1) : 0,
+      apoRate: totalCalls > 0 ? +((totalApo / totalCalls) * 100).toFixed(1) : 0,
+      apoPerConnectRate: totalConnect > 0 ? +((totalApo / totalConnect) * 100).toFixed(1) : 0,
+      stepBreakdown, dayCount
+    };
+  }
+
+  async function runAiAnalysis() {
+    const resultEl = document.getElementById("ai-analysis-result");
+    const btn = document.getElementById("btn-ai-analyze");
+
+    if (!AI_ANALYZE_FUNCTION_URL) {
+      showToast("AI分析用のCloud Function URLが未設定です（管理者にご確認ください）", "#icon-bell");
+      return;
+    }
+
+    const stats = collectStatusStatsForAI();
+    if (stats.totalCalls === 0) {
+      resultEl.textContent = "対象期間・条件のデータが見つかりませんでした。フィルターを見直してください。";
+      return;
+    }
+
+    const uFilter = document.getElementById("sa-user-select").value;
+    const sD = document.getElementById("sa-start-date").value;
+    const eD = document.getElementById("sa-end-date").value;
+    const userName = uFilter === "__ALL_USERS__" ? "チーム全体" : uFilter;
+    const periodLabel = `${sD || "指定なし"} 〜 ${eD || "指定なし"}`;
+
+    btn.disabled = true;
+    resultEl.textContent = "AIが分析中です...";
+
+    try {
+      const res = await fetch(AI_ANALYZE_FUNCTION_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userName, periodLabel, stats })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "分析に失敗しました");
+      resultEl.textContent = data.analysis || "分析結果が空でした。";
+    } catch (e) {
+      resultEl.textContent = "エラーが発生しました: " + e.message;
+      showToast("AI分析に失敗しました", "#icon-bell");
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // --- KPI / KGI 管理 ---
@@ -1853,7 +2128,7 @@
   function startTimer() { if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。"); if (isRunning) return; startTime = Date.now(); isRunning = true; timerInterval = setInterval(() => { updateTimerDisplay(); if(Math.floor(getTotalSeconds()) % 10 === 0) { renderStats(); saveData(); } }, 100); }
   function stopTimer() { if (!isRunning) return; saveData(); clearInterval(timerInterval); timerInterval = null; isRunning = false; renderStats(); updateTimerDisplay(); }
   function resetTimer() { if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。"); stopTimer(); appData[currentUser][currentDateStr][currentProduct].timerSeconds = 0; saveData(); renderStats(); updateTimerDisplay(); }
-  function updateTimerDisplay() { const t = getTotalSeconds(); document.getElementById('display-time').textContent = `${Math.floor(t/3600).toString().padStart(2,'0')}:${Math.floor((t%3600)/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`; }
+  function updateTimerDisplay() { const t = getTotalSeconds(); const str = `${Math.floor(t/3600).toString().padStart(2,'0')}:${Math.floor((t%3600)/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`; document.getElementById('display-time').textContent = str; if (isMiniMode) document.getElementById('mini-display-time').textContent = str; }
   function setManualTime() {
     if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。");
     const h = parseInt(document.getElementById('edit-h').value)||0, m = parseInt(document.getElementById('edit-m').value)||0, s = parseInt(document.getElementById('edit-s').value)||0;
@@ -2102,6 +2377,7 @@
 
     renderHourlyTable();
     updateRankings();
+    renderMini();
   }
 
   function updateRankings() {
@@ -2255,7 +2531,7 @@
     const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], {type:'text/csv;charset=utf-8;'})); l.download=`架電記録_全履歴_${getTodayString()}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l);
   }
 
-  window.onload = init;
+  window.onload = function() { init(); initMiniDrag(); };
 </script>
 </body>
 </html>
