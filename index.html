@@ -263,7 +263,7 @@
     .mini-widget-header {
       background: var(--sidebar-bg); color: #fff; padding: 8px 10px;
       display: flex; align-items: center; justify-content: space-between;
-      cursor: move; font-size: 12px; font-weight: 700; user-select: none;
+      font-size: 12px; font-weight: 700; user-select: none;
     }
     .mini-widget-header .mini-title { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mini-widget-header .icon { flex-shrink: 0; }
@@ -393,7 +393,7 @@
           <span id="current-user-display">ゲスト</span>
         </div>
 
-        <button class="btn-settings-top" onclick="toggleMiniMode()" title="小さなウィンドウで表示（最小化）">
+        <button class="btn-settings-top" onclick="toggleMiniMode()" title="小さな別ウィンドウで表示（他のタブに切り替えても表示されます）">
           <svg class="icon" style="margin:0;"><use href="#icon-minimize"></use></svg>
         </button>
         <button class="btn-settings-top" onclick="logout()" title="ログアウト">
@@ -820,7 +820,7 @@
       <svg class="icon" style="width:14px; height:14px;"><use href="#icon-phone"></use></svg>
       <span id="mini-user-product">-</span>
     </span>
-    <button class="btn-icon-only" style="width:22px; height:22px; background:transparent; color:#fff;" onclick="toggleMiniMode()" title="元の画面に戻る">
+    <button class="btn-icon-only" id="mini-close-btn" style="width:22px; height:22px; background:transparent; color:#fff;" title="元の画面に戻る">
       <svg class="icon" style="width:14px; height:14px; margin:0;"><use href="#icon-x"></use></svg>
     </button>
   </div>
@@ -829,9 +829,9 @@
     <div id="mini-active-area">
       <div class="mini-timer" id="mini-display-time">00:00:00</div>
       <div class="mini-timer-controls">
-        <button class="btn btn-primary btn-icon-only" onclick="startTimer()" title="開始"><svg class="icon"><use href="#icon-play"></use></svg></button>
-        <button class="btn btn-outline btn-icon-only" style="background:#f59e0b; color:#fff; border:none;" onclick="stopTimer()" title="停止"><svg class="icon"><use href="#icon-pause"></use></svg></button>
-        <button class="btn btn-outline btn-icon-only" onclick="resetTimer()" title="クリア"><svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg></button>
+        <button class="btn btn-primary btn-icon-only" id="mini-btn-start" title="開始"><svg class="icon"><use href="#icon-play"></use></svg></button>
+        <button class="btn btn-outline btn-icon-only" id="mini-btn-stop" style="background:#f59e0b; color:#fff; border:none;" title="停止"><svg class="icon"><use href="#icon-pause"></use></svg></button>
+        <button class="btn btn-outline btn-icon-only" id="mini-btn-reset" title="クリア"><svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg></button>
       </div>
       <div class="mini-counter-grid" id="mini-counter-grid"></div>
     </div>
@@ -926,7 +926,6 @@
   let dailyChartInstance = null;
 
   let isMiniMode = false;
-  let miniDragOffset = null;
 
   function getTodayString() {
     const d = new Date();
@@ -1107,7 +1106,7 @@
     if (isRunning) stopTimer();
     currentUser = "";
     if(personalScriptUnsubscribe) { personalScriptUnsubscribe(); personalScriptUnsubscribe = null; }
-    if (isMiniMode) { isMiniMode = false; document.getElementById("mini-widget").classList.remove("show"); }
+    if (isMiniMode) closeMiniWindow();
     document.getElementById("main-app").style.display = "none";
     setupLogin();
   }
@@ -1201,77 +1200,135 @@
     });
   }
 
-  // --- フローティング小窓モード（最小化） ---
+  // --- フローティング小窓モード（最小化・他のタブ表示中も見えるようにする） ---
+  // ページ内で折りたたむだけだと、別タブに切り替えた瞬間にページごと非表示になってしまうため、
+  // 実際には #mini-widget のDOMノードを「別ウィンドウ」に移動させる。
+  // Chrome/Edge等はDocument Picture-in-Picture APIで常に最前面に浮く小窓になり、
+  // 非対応ブラウザは通常のポップアップウィンドウにフォールバックする（どちらも他タブに切り替えても表示され続ける）。
+  const miniWidgetEl = document.getElementById('mini-widget');
+  let miniDoc = document;
+  let miniTargetWindow = null;
+
   function toggleMiniMode() {
-    isMiniMode = !isMiniMode;
-    const widget = document.getElementById('mini-widget');
-    if (isMiniMode) {
-      document.getElementById('main-app').style.display = 'none';
-      widget.classList.add('show');
-      applyMiniPosition();
-      buildMiniControlPanel();
-      renderMini();
-    } else {
-      widget.classList.remove('show');
-      document.getElementById('main-app').style.display = 'flex';
-    }
+    if (isMiniMode) closeMiniWindow();
+    else openFloatingWindow();
   }
 
-  function applyMiniPosition() {
-    const widget = document.getElementById('mini-widget');
-    let pos = null;
-    try { pos = JSON.parse(localStorage.getItem('kaden_mini_pos')); } catch (e) {}
-    widget.style.right = ''; widget.style.bottom = '';
-    if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
-      widget.style.left = Math.min(Math.max(0, pos.left), window.innerWidth - 60) + 'px';
-      widget.style.top = Math.min(Math.max(0, pos.top), window.innerHeight - 60) + 'px';
-    } else {
-      widget.style.left = (window.innerWidth - 280) + 'px';
-      widget.style.top = (window.innerHeight - 400) + 'px';
-    }
+  function copyStylesToWindow(targetWindow) {
+    Array.from(document.styleSheets).forEach(styleSheet => {
+      try {
+        const rules = Array.from(styleSheet.cssRules).map(r => r.cssText).join('\n');
+        const style = targetWindow.document.createElement('style');
+        style.textContent = rules;
+        targetWindow.document.head.appendChild(style);
+      } catch (e) {
+        // クロスオリジンのスタイルシート（Googleフォント等）はcssRulesが読めないので<link>で読み込み直す
+        if (styleSheet.href) {
+          const link = targetWindow.document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = styleSheet.href;
+          targetWindow.document.head.appendChild(link);
+        }
+      }
+    });
   }
 
-  function initMiniDrag() {
-    const header = document.getElementById('mini-widget-header');
-    const widget = document.getElementById('mini-widget');
-    header.addEventListener('mousedown', (e) => {
-      if (e.target.closest('button')) return;
-      const rect = widget.getBoundingClientRect();
-      miniDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!miniDragOffset) return;
-      let left = e.clientX - miniDragOffset.x;
-      let top = e.clientY - miniDragOffset.y;
-      left = Math.min(Math.max(0, left), window.innerWidth - widget.offsetWidth);
-      top = Math.min(Math.max(0, top), window.innerHeight - widget.offsetHeight);
-      widget.style.right = ''; widget.style.bottom = '';
-      widget.style.left = left + 'px';
-      widget.style.top = top + 'px';
-    });
-    document.addEventListener('mouseup', () => {
-      if (!miniDragOffset) return;
-      miniDragOffset = null;
-      const rect = widget.getBoundingClientRect();
-      localStorage.setItem('kaden_mini_pos', JSON.stringify({ left: rect.left, top: rect.top }));
-    });
+  async function openFloatingWindow() {
+    let targetWindow;
+    try {
+      if ('documentPictureInPicture' in window) {
+        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 480 });
+      } else {
+        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=520,popup=yes');
+        if (!targetWindow) {
+          showToast('ポップアップがブロックされました。ブラウザの設定をご確認ください', '#icon-bell');
+          return;
+        }
+        targetWindow.document.title = 'CALL APP - 小窓';
+      }
+    } catch (e) {
+      showToast('小窓の表示に失敗しました', '#icon-bell');
+      return;
+    }
+
+    copyStylesToWindow(targetWindow);
+    targetWindow.document.body.style.margin = '0';
+
+    miniWidgetEl.classList.add('show');
+    miniWidgetEl.style.position = 'static';
+    miniWidgetEl.style.width = '100%';
+    miniWidgetEl.style.height = '100%';
+    miniWidgetEl.style.boxShadow = 'none';
+    miniWidgetEl.style.borderRadius = '0';
+    targetWindow.document.body.appendChild(miniWidgetEl);
+
+    miniDoc = targetWindow.document;
+    miniTargetWindow = targetWindow;
+    isMiniMode = true;
+    document.getElementById('main-app').style.display = 'none';
+
+    buildMiniControlPanel();
+    renderMini();
+
+    targetWindow.addEventListener('pagehide', restoreMiniWidget, { once: true });
+  }
+
+  function closeMiniWindow() {
+    if (miniTargetWindow && !miniTargetWindow.closed) miniTargetWindow.close();
+    else restoreMiniWidget();
+  }
+
+  function restoreMiniWidget() {
+    if (!isMiniMode) return;
+    miniWidgetEl.classList.remove('show');
+    miniWidgetEl.style.position = '';
+    miniWidgetEl.style.width = '';
+    miniWidgetEl.style.height = '';
+    miniWidgetEl.style.boxShadow = '';
+    miniWidgetEl.style.borderRadius = '';
+    document.body.appendChild(miniWidgetEl);
+    miniDoc = document;
+    miniTargetWindow = null;
+    isMiniMode = false;
+    document.getElementById('main-app').style.display = 'flex';
+  }
+
+  function initMiniWidgetHandlers() {
+    document.getElementById('mini-close-btn').addEventListener('click', closeMiniWindow);
+    document.getElementById('mini-btn-start').addEventListener('click', () => startTimer());
+    document.getElementById('mini-btn-stop').addEventListener('click', () => stopTimer());
+    document.getElementById('mini-btn-reset').addEventListener('click', () => resetTimer());
   }
 
   function buildMiniControlPanel() {
-    const grid = document.getElementById('mini-counter-grid');
+    const grid = miniDoc.getElementById('mini-counter-grid');
     grid.innerHTML = '';
     items.forEach(item => {
       const div = document.createElement('div');
       div.className = `mini-counter-item ${item.cls || ''}`;
-      div.innerHTML = `
-        <span class="mc-label">${item.name}</span>
-        <div class="mc-stepper">
-          <button onclick="changeValue(${item.id}, -1)">−</button>
-          <span class="mc-val" id="mini-val-${item.id}">0</span>
-          <button onclick="changeValue(${item.id}, 1)">＋</button>
-        </div>
-      `;
+
+      const label = document.createElement('span');
+      label.className = 'mc-label';
+      label.textContent = item.name;
+
+      const stepper = document.createElement('div');
+      stepper.className = 'mc-stepper';
+
+      const minusBtn = document.createElement('button');
+      minusBtn.textContent = '−';
+      minusBtn.addEventListener('click', () => changeValue(item.id, -1));
+
+      const val = document.createElement('span');
+      val.className = 'mc-val';
+      val.id = `mini-val-${item.id}`;
+      val.textContent = '0';
+
+      const plusBtn = document.createElement('button');
+      plusBtn.textContent = '＋';
+      plusBtn.addEventListener('click', () => changeValue(item.id, 1));
+
+      stepper.append(minusBtn, val, plusBtn);
+      div.append(label, stepper);
       grid.appendChild(div);
     });
   }
@@ -1279,15 +1336,16 @@
   function renderMini() {
     if (!isMiniMode) return;
     const isAll = currentProduct === ALL_PRODUCTS_KEY;
-    document.getElementById('mini-user-product').textContent = `${currentUser} / ${isAll ? '全商材(閲覧)' : currentProduct}`;
-    document.getElementById('mini-disabled-msg').style.display = isAll ? 'block' : 'none';
-    document.getElementById('mini-active-area').style.display = isAll ? 'none' : 'block';
+    miniDoc.getElementById('mini-user-product').textContent = `${currentUser} / ${isAll ? '全商材(閲覧)' : currentProduct}`;
+    miniDoc.getElementById('mini-disabled-msg').style.display = isAll ? 'block' : 'none';
+    miniDoc.getElementById('mini-active-area').style.display = isAll ? 'none' : 'block';
     if (isAll) return;
 
-    document.getElementById('mini-display-time').textContent = document.getElementById('display-time').textContent;
+    const timeEl = miniDoc.getElementById('mini-display-time');
+    if (timeEl) timeEl.textContent = document.getElementById('display-time').textContent;
     const state = getActiveState();
     items.forEach(item => {
-      const el = document.getElementById(`mini-val-${item.id}`);
+      const el = miniDoc.getElementById(`mini-val-${item.id}`);
       if (el) {
         let val = state.counts[item.id] || 0;
         el.textContent = (item.id === 9 && val % 1 !== 0) ? val.toFixed(1) : val;
@@ -2128,7 +2186,7 @@
   function startTimer() { if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。"); if (isRunning) return; startTime = Date.now(); isRunning = true; timerInterval = setInterval(() => { updateTimerDisplay(); if(Math.floor(getTotalSeconds()) % 10 === 0) { renderStats(); saveData(); } }, 100); }
   function stopTimer() { if (!isRunning) return; saveData(); clearInterval(timerInterval); timerInterval = null; isRunning = false; renderStats(); updateTimerDisplay(); }
   function resetTimer() { if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。"); stopTimer(); appData[currentUser][currentDateStr][currentProduct].timerSeconds = 0; saveData(); renderStats(); updateTimerDisplay(); }
-  function updateTimerDisplay() { const t = getTotalSeconds(); const str = `${Math.floor(t/3600).toString().padStart(2,'0')}:${Math.floor((t%3600)/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`; document.getElementById('display-time').textContent = str; if (isMiniMode) document.getElementById('mini-display-time').textContent = str; }
+  function updateTimerDisplay() { const t = getTotalSeconds(); const str = `${Math.floor(t/3600).toString().padStart(2,'0')}:${Math.floor((t%3600)/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`; document.getElementById('display-time').textContent = str; if (isMiniMode) { const el = miniDoc.getElementById('mini-display-time'); if (el) el.textContent = str; } }
   function setManualTime() {
     if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。");
     const h = parseInt(document.getElementById('edit-h').value)||0, m = parseInt(document.getElementById('edit-m').value)||0, s = parseInt(document.getElementById('edit-s').value)||0;
@@ -2531,7 +2589,7 @@
     const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], {type:'text/csv;charset=utf-8;'})); l.download=`架電記録_全履歴_${getTodayString()}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l);
   }
 
-  window.onload = function() { init(); initMiniDrag(); };
+  window.onload = function() { init(); initMiniWidgetHandlers(); };
 </script>
 </body>
 </html>
