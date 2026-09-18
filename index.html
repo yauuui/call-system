@@ -282,6 +282,18 @@
     .mini-counter-item .mc-stepper .mc-val { font-size: 12px; font-weight: 700; min-width: 22px; text-align: center; }
     .mini-disabled-msg { text-align: center; font-size: 11px; color: var(--danger); padding: 15px 5px; font-weight: 600; }
 
+    .mini-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .mini-stat-box { border-left: 3px solid var(--accent); background: #f8fafc; border-radius: 0 4px 4px 0; padding: 5px 6px; }
+    .mini-stat-label { font-size: 9px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-stat-val { font-size: 14px; font-weight: 700; color: var(--text-main); }
+
+    .mini-mode-tabs { display: flex; gap: 6px; }
+    .mini-tab-btn { flex: 1; padding: 5px 4px; font-size: 11px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: var(--text-muted); border-radius: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: 0.2s; }
+    .mini-tab-btn:hover { background: #f1f5f9; }
+    .mini-tab-btn.active { background: var(--sidebar-bg); color: #fff; border-color: var(--sidebar-bg); }
+    .mini-memo-textarea { width: 100%; height: 220px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 12px; font-family: inherit; outline: none; box-sizing: border-box; }
+    .mini-memo-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2); }
+
     /* AI分析パネル */
     .ai-analysis-box { font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text-main); background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; min-height: 60px; }
 
@@ -833,7 +845,33 @@
         <button class="btn btn-outline btn-icon-only" id="mini-btn-stop" style="background:#f59e0b; color:#fff; border:none;" title="停止"><svg class="icon"><use href="#icon-pause"></use></svg></button>
         <button class="btn btn-outline btn-icon-only" id="mini-btn-reset" title="クリア"><svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg></button>
       </div>
+
+      <div class="mini-stats-row">
+        <div class="mini-stat-box">
+          <div class="mini-stat-label">架電数/h</div>
+          <div class="mini-stat-val" id="mini-stat-cph">0.0</div>
+        </div>
+        <div class="mini-stat-box">
+          <div class="mini-stat-label">受付突破率</div>
+          <div class="mini-stat-val" id="mini-stat-breakthrough">0.0%</div>
+        </div>
+        <div class="mini-stat-box">
+          <div class="mini-stat-label">アポ率</div>
+          <div class="mini-stat-val" id="mini-stat-orderrate">0.0%</div>
+        </div>
+      </div>
+
+      <div class="mini-mode-tabs">
+        <button class="mini-tab-btn active" id="mini-tab-count" title="カウントモード">
+          <svg class="icon" style="width:13px; height:13px;"><use href="#icon-phone"></use></svg> カウント
+        </button>
+        <button class="mini-tab-btn" id="mini-tab-memo" title="メモモード">
+          <svg class="icon" style="width:13px; height:13px;"><use href="#icon-edit"></use></svg> メモ
+        </button>
+      </div>
+
       <div class="mini-counter-grid" id="mini-counter-grid"></div>
+      <textarea class="mini-memo-textarea" id="mini-memo-textarea" style="display:none;" placeholder="架電中に気づいたこと、次にかけるリストへの申し送りなどを自由にメモできます..."></textarea>
     </div>
   </div>
 </div>
@@ -948,7 +986,7 @@
           apo: Array(10).fill(0),
           time: Array(10).fill(0)
       },
-      timerSeconds: 0, targetQualitative: "", targetApo: 3, targetCph: 20
+      timerSeconds: 0, targetQualitative: "", targetApo: 3, targetCph: 20, memo: ""
     };
   }
   
@@ -1268,6 +1306,7 @@
     document.getElementById('main-app').style.display = 'none';
 
     buildMiniControlPanel();
+    switchMiniView('count');
     renderMini();
 
     targetWindow.addEventListener('pagehide', restoreMiniWidget, { once: true });
@@ -1298,6 +1337,28 @@
     document.getElementById('mini-btn-start').addEventListener('click', () => startTimer());
     document.getElementById('mini-btn-stop').addEventListener('click', () => stopTimer());
     document.getElementById('mini-btn-reset').addEventListener('click', () => resetTimer());
+    document.getElementById('mini-tab-count').addEventListener('click', () => switchMiniView('count'));
+    document.getElementById('mini-tab-memo').addEventListener('click', () => switchMiniView('memo'));
+    document.getElementById('mini-memo-textarea').addEventListener('input', (e) => scheduleMemoSave(e.target.value));
+  }
+
+  let miniViewMode = 'count';
+  function switchMiniView(mode) {
+    miniViewMode = mode;
+    miniDoc.getElementById('mini-tab-count').classList.toggle('active', mode === 'count');
+    miniDoc.getElementById('mini-tab-memo').classList.toggle('active', mode === 'memo');
+    miniDoc.getElementById('mini-counter-grid').style.display = mode === 'count' ? 'grid' : 'none';
+    miniDoc.getElementById('mini-memo-textarea').style.display = mode === 'memo' ? 'block' : 'none';
+  }
+
+  let miniMemoSaveTimer = null;
+  function scheduleMemoSave(value) {
+    if (currentProduct === ALL_PRODUCTS_KEY) return;
+    const state = appData[currentUser]?.[currentDateStr]?.[currentProduct];
+    if (!state) return;
+    state.memo = value;
+    clearTimeout(miniMemoSaveTimer);
+    miniMemoSaveTimer = setTimeout(saveDataCloudOnly, 800);
   }
 
   function buildMiniControlPanel() {
@@ -1351,6 +1412,25 @@
         el.textContent = (item.id === 9 && val % 1 !== 0) ? val.toFixed(1) : val;
       }
     });
+
+    let uk = state.counts[0]||0, fu = state.counts[1]||0, fuz = state.counts[2]||0;
+    let tbk = (state.counts[3]||0)+(state.counts[4]||0)+(state.counts[5]||0)+(state.counts[6]||0)+(state.counts[7]||0)+(state.counts[8]||0);
+    let apo = state.counts[9]||0, tcon = tbk+apo, tot = uk+fu+fuz+tcon;
+    let brk = tot>0 ? ((tcon/tot)*100).toFixed(1) : "0.0";
+    let ord = tot>0 ? ((apo/tot)*100).toFixed(1) : "0.0";
+    let elp = getTotalSeconds(), cphNum = elp>0 ? (tot/(elp/3600)) : 0;
+
+    const cphEl = miniDoc.getElementById('mini-stat-cph');
+    const brkEl = miniDoc.getElementById('mini-stat-breakthrough');
+    const ordEl = miniDoc.getElementById('mini-stat-orderrate');
+    if (cphEl) cphEl.textContent = cphNum.toFixed(1);
+    if (brkEl) brkEl.textContent = brk + '%';
+    if (ordEl) ordEl.textContent = ord + '%';
+
+    const memoEl = miniDoc.getElementById('mini-memo-textarea');
+    if (memoEl && miniDoc.activeElement !== memoEl) {
+      memoEl.value = state.memo || "";
+    }
   }
 
   // --- 高機能 ナレッジベース管理 ---
