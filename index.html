@@ -263,16 +263,17 @@
     .mini-widget-header {
       background: var(--sidebar-bg); color: #fff; padding: 8px 10px;
       display: flex; align-items: center; justify-content: space-between;
-      font-size: 12px; font-weight: 700; user-select: none;
+      font-size: 12px; font-weight: 700; user-select: none; flex-shrink: 0;
     }
     .mini-widget-header .mini-title { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mini-widget-header .icon { flex-shrink: 0; }
-    .mini-widget-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .mini-timer { text-align: center; font-size: 22px; font-weight: 700; color: var(--text-main); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 1px; }
-    .mini-timer-controls { display: flex; justify-content: center; gap: 8px; }
+    .mini-widget-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden; }
+    .mini-active-area { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+    .mini-timer { text-align: center; font-size: 22px; font-weight: 700; color: var(--text-main); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 1px; flex-shrink: 0; }
+    .mini-timer-controls { display: flex; justify-content: center; gap: 8px; flex-shrink: 0; }
     .mini-timer-controls button.btn-icon-only { width: 28px; height: 28px; }
     .mini-timer-controls button.btn-icon-only .icon { width: 14px; height: 14px; }
-    .mini-counter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 230px; overflow-y: auto; }
+    .mini-counter-grid { display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 6px; flex: 1; min-height: 0; overflow-y: auto; }
     .mini-counter-item { display: flex; flex-direction: column; align-items: center; border: 1px solid var(--border); border-radius: 4px; padding: 5px 3px; background: #f8fafc; }
     .mini-counter-item.apo-box { background: #f0fdf4; border-color: #86efac; }
     .mini-counter-item .mc-label { font-size: 10px; color: var(--text-muted); font-weight: 600; text-align: center; margin-bottom: 3px; line-height: 1.2; }
@@ -282,16 +283,16 @@
     .mini-counter-item .mc-stepper .mc-val { font-size: 12px; font-weight: 700; min-width: 22px; text-align: center; }
     .mini-disabled-msg { text-align: center; font-size: 11px; color: var(--danger); padding: 15px 5px; font-weight: 600; }
 
-    .mini-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .mini-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; flex-shrink: 0; }
     .mini-stat-box { border-left: 3px solid var(--accent); background: #f8fafc; border-radius: 0 4px 4px 0; padding: 5px 6px; }
     .mini-stat-label { font-size: 9px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-stat-val { font-size: 14px; font-weight: 700; color: var(--text-main); }
 
-    .mini-mode-tabs { display: flex; gap: 6px; }
-    .mini-tab-btn { flex: 1; padding: 5px 4px; font-size: 11px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: var(--text-muted); border-radius: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: 0.2s; }
+    .mini-mode-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+    .mini-tab-btn { flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: var(--text-muted); border-radius: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: 0.2s; }
     .mini-tab-btn:hover { background: #f1f5f9; }
     .mini-tab-btn.active { background: var(--sidebar-bg); color: #fff; border-color: var(--sidebar-bg); }
-    .mini-memo-textarea { width: 100%; height: 220px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 12px; font-family: inherit; outline: none; box-sizing: border-box; }
+    .mini-memo-textarea { width: 100%; flex: 1; min-height: 100px; resize: none; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 12px; font-family: inherit; outline: none; box-sizing: border-box; }
     .mini-memo-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2); }
 
     /* AI分析パネル */
@@ -302,7 +303,7 @@
 <body>
 
 <!-- SVGアイコン群 -->
-<svg style="display:none;">
+<svg id="icon-sprite" style="display:none;">
   <symbol id="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></symbol>
   <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.21 15.89A10 10 0 118.11 2.8c.532.06 1.05.187 1.55.378V12h9.19a9.962 9.962 0 012.36 3.89z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12.5 3.208V11h7.792" /></symbol>
   <symbol id="icon-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></symbol>
@@ -838,7 +839,7 @@
   </div>
   <div class="mini-widget-body">
     <div id="mini-disabled-msg" class="mini-disabled-msg" style="display:none;">※全商材まとめ閲覧モードのため操作できません</div>
-    <div id="mini-active-area">
+    <div id="mini-active-area" class="mini-active-area">
       <div class="mini-timer" id="mini-display-time">00:00:00</div>
       <div class="mini-timer-controls">
         <button class="btn btn-primary btn-icon-only" id="mini-btn-start" title="開始"><svg class="icon"><use href="#icon-play"></use></svg></button>
@@ -1291,6 +1292,13 @@
 
     copyStylesToWindow(targetWindow);
     targetWindow.document.body.style.margin = '0';
+    targetWindow.document.body.style.height = '100vh';
+    targetWindow.document.body.style.overflow = 'hidden';
+
+    // <use href="#icon-x">はDOMツリー内（同一ドキュメント）のSVGしか参照できないため、
+    // アイコン定義（<symbol>群）を小窓側のドキュメントにも複製しておく。
+    const iconSprite = document.getElementById('icon-sprite');
+    if (iconSprite) targetWindow.document.body.appendChild(iconSprite.cloneNode(true));
 
     miniWidgetEl.classList.add('show');
     miniWidgetEl.style.position = 'static';
@@ -1399,7 +1407,7 @@
     const isAll = currentProduct === ALL_PRODUCTS_KEY;
     miniDoc.getElementById('mini-user-product').textContent = `${currentUser} / ${isAll ? '全商材(閲覧)' : currentProduct}`;
     miniDoc.getElementById('mini-disabled-msg').style.display = isAll ? 'block' : 'none';
-    miniDoc.getElementById('mini-active-area').style.display = isAll ? 'none' : 'block';
+    miniDoc.getElementById('mini-active-area').style.display = isAll ? 'none' : 'flex';
     if (isAll) return;
 
     const timeEl = miniDoc.getElementById('mini-display-time');
