@@ -860,6 +860,82 @@
         </div>
 
         <div class="card">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>2つの条件を見比べる</span>
+            <div class="switch-container">
+              <span style="font-size:12px; font-weight:700; color:var(--text-muted);">比較モード</span>
+              <label class="switch">
+                <input type="checkbox" id="sa-compare-toggle" onchange="toggleStatusCompareMode()">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="card-body" id="sa-compare-body" style="display:none;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+
+              <div style="border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+                <div style="background:#eff6ff; padding:10px 15px; border-bottom:1px solid var(--border);">
+                  <input type="text" id="sa-a-label" value="比較A" style="border:none; background:transparent; font-weight:700; font-size:14px; outline:none; color:#1d4ed8; width:100%;">
+                </div>
+                <div style="padding:15px;">
+                  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;">
+                    <select id="sa-a-user-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <select id="sa-a-product-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <select id="sa-a-list-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <select id="sa-a-talk-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <input type="date" id="sa-a-start-date" onchange="renderStatusComparison()" style="flex:1; min-width:120px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;">
+                    <input type="date" id="sa-a-end-date" onchange="renderStatusComparison()" style="flex:1; min-width:120px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;">
+                  </div>
+                  <div class="kpi-row" style="grid-template-columns: repeat(3,1fr); margin-bottom:15px;">
+                    <div class="kpi-box" style="border-left-color:#3b82f6;"><div class="kpi-label">総架電数</div><div class="kpi-val" id="sa-a-total-calls">0</div></div>
+                    <div class="kpi-box" style="border-left-color:var(--accent);"><div class="kpi-label">受付突破率</div><div class="kpi-val" id="sa-a-connect-rate">0.0%</div></div>
+                    <div class="kpi-box" style="border-left-color:#f59e0b;"><div class="kpi-label">アポ率</div><div class="kpi-val" id="sa-a-apo-rate">0.0%</div></div>
+                  </div>
+                  <div class="chart-container" style="height:180px; margin-bottom:15px;"><canvas id="sa-a-breakdown-chart"></canvas></div>
+                  <div id="sa-a-funnel-container" class="funnel-wrap" style="margin-bottom:15px;"></div>
+                  <div class="table-container">
+                    <table>
+                      <thead><tr><th>ステージ</th><th>到達</th><th>離脱</th><th>通過</th><th>通過率</th></tr></thead>
+                      <tbody id="sa-a-stage-table-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+                <div style="background:#faf5ff; padding:10px 15px; border-bottom:1px solid var(--border);">
+                  <input type="text" id="sa-b-label" value="比較B" style="border:none; background:transparent; font-weight:700; font-size:14px; outline:none; color:#7e22ce; width:100%;">
+                </div>
+                <div style="padding:15px;">
+                  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;">
+                    <select id="sa-b-user-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <select id="sa-b-product-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <select id="sa-b-list-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <select id="sa-b-talk-select" onchange="renderStatusComparison()" style="flex:1; min-width:110px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;"></select>
+                    <input type="date" id="sa-b-start-date" onchange="renderStatusComparison()" style="flex:1; min-width:120px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;">
+                    <input type="date" id="sa-b-end-date" onchange="renderStatusComparison()" style="flex:1; min-width:120px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;">
+                  </div>
+                  <div class="kpi-row" style="grid-template-columns: repeat(3,1fr); margin-bottom:15px;">
+                    <div class="kpi-box" style="border-left-color:#3b82f6;"><div class="kpi-label">総架電数</div><div class="kpi-val" id="sa-b-total-calls">0</div></div>
+                    <div class="kpi-box" style="border-left-color:var(--accent);"><div class="kpi-label">受付突破率</div><div class="kpi-val" id="sa-b-connect-rate">0.0%</div></div>
+                    <div class="kpi-box" style="border-left-color:#f59e0b;"><div class="kpi-label">アポ率</div><div class="kpi-val" id="sa-b-apo-rate">0.0%</div></div>
+                  </div>
+                  <div class="chart-container" style="height:180px; margin-bottom:15px;"><canvas id="sa-b-breakdown-chart"></canvas></div>
+                  <div id="sa-b-funnel-container" class="funnel-wrap" style="margin-bottom:15px;"></div>
+                  <div class="table-container">
+                    <table>
+                      <thead><tr><th>ステージ</th><th>到達</th><th>離脱</th><th>通過</th><th>通過率</th></tr></thead>
+                      <tbody id="sa-b-stage-table-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-header">
             <span style="display:flex; align-items:center; gap:8px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-sparkles"></use></svg> AI分析（苦手傾向と改善方法）</span>
             <button class="btn btn-primary" id="btn-ai-analyze" onclick="runAiAnalysis()">
@@ -1397,6 +1473,32 @@
     else if(tabName === 'listanalysis') renderListAnalysis();
   }
 
+  // アカウント／商材／リスト／トークの4点セットのセレクトを指定IDプレフィックスに対して組み立てる（比較モードのA/B等、同じ形のフィルターが複数必要な箇所で使う）
+  function populateUserProductListTalkSelects(prefix) {
+    const uSel = document.getElementById(`${prefix}-user-select`);
+    if (uSel) {
+      uSel.innerHTML = '<option value="__ALL_USERS__">【全員の合計】</option>';
+      usersList.forEach(u => uSel.add(new Option(u, u)));
+    }
+    const pSel = document.getElementById(`${prefix}-product-select`);
+    if (pSel) {
+      pSel.innerHTML = '<option value="__ALL_PRODUCTS__">【全商材の合計】</option>';
+      productsList.forEach(p => pSel.add(new Option(p, p)));
+    }
+    const lSel = document.getElementById(`${prefix}-list-select`);
+    if (lSel) {
+      lSel.innerHTML = '<option value="__ALL__">【全リスト】</option>';
+      listsList.forEach(l => lSel.add(new Option(l, l)));
+      lSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
+    }
+    const tSel = document.getElementById(`${prefix}-talk-select`);
+    if (tSel) {
+      tSel.innerHTML = '<option value="__ALL__">【全トーク】</option>';
+      talksList.forEach(t => tSel.add(new Option(t.name, t.name)));
+      tSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
+    }
+  }
+
   function updateSelectUIs() {
     const pSel = document.getElementById("product-select"); pSel.innerHTML = "";
     pSel.add(new Option("【全商材まとめ (閲覧のみ)】", ALL_PRODUCTS_KEY));
@@ -1446,6 +1548,10 @@
     const stSel = document.getElementById("sa-talk-select"); stSel.innerHTML = '<option value="__ALL__">【全トーク】</option>';
     talksList.forEach(t => stSel.add(new Option(t.name, t.name)));
     stSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
+
+    // ステータス分析の比較モード（比較A／比較B）用セレクト
+    populateUserProductListTalkSelects('sa-a');
+    populateUserProductListTalkSelects('sa-b');
 
     const sSel = document.getElementById("script-product-select");
     const currentScriptVal = sSel.value;
@@ -1890,13 +1996,8 @@
   function escapeHTML(str) { if(!str) return ""; return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])); }
 
   // --- ステータス分析機能 ---
-  function renderStatusAnalysis() {
-      const uFilter = document.getElementById("sa-user-select").value;
-      const pFilter = document.getElementById("sa-product-select").value;
-      const lFilter = document.getElementById("sa-list-select").value;
-      const tFilter = document.getElementById("sa-talk-select").value;
-      const sD = document.getElementById("sa-start-date").value;
-      const eD = document.getElementById("sa-end-date").value;
+  // countsの配列1件分を合計値・日別集計に加算する（リスト/トーク絞り込みの有無にかかわらず共通で使う）
+  function computeStatusAnalysisData(uFilter, pFilter, lFilter, tFilter, sD, eD, includeHourly) {
       const isFiltered = (lFilter !== "__ALL__" || tFilter !== "__ALL__");
 
       let totalUk = 0, totalFu = 0, totalFz = 0, totalTbk = 0, totalApo = 0;
@@ -1905,7 +2006,6 @@
       let hMokuteki = Array(10).fill(0), hMeritKinou = Array(10).fill(0), hMeritBene = Array(10).fill(0), hKotowarizurai = Array(10).fill(0), hClosing = Array(10).fill(0), hCounter = Array(10).fill(0);
       let dailyStats = {};
 
-      // countsの配列1件分を合計値・日別集計に加算する（リスト/トーク絞り込みの有無にかかわらず共通で使う）
       function accumulateCounts(c, date) {
           let uk = c[0]||0, fu = c[1]||0, fz = c[2]||0;
           let mokuteki = c[3]||0, meritKinou = c[4]||0, meritBene = c[5]||0, kotowarizurai = c[6]||0, closing = c[7]||0, counter = c[8]||0;
@@ -1937,18 +2037,20 @@
                   if (!isFiltered) {
                       // 絞り込みなし：従来通り商材単位の合計（counts/hourly）をそのまま使う
                       accumulateCounts(d.counts || Array(10).fill(0), date);
-                      for(let i=0; i<10; i++) {
-                          hUk[i] += d.hourly?.uketsuke?.[i] || 0;
-                          hFu[i] += d.hourly?.futsu?.[i] || 0;
-                          hFz[i] += d.hourly?.fuzai?.[i] || 0;
-                          hTbk[i] += d.hourly?.tantoBK?.[i] || 0;
-                          hApo[i] += d.hourly?.apo?.[i] || 0;
-                          hMokuteki[i] += d.hourly?.mokuteki?.[i] || 0;
-                          hMeritKinou[i] += d.hourly?.meritKinou?.[i] || 0;
-                          hMeritBene[i] += d.hourly?.meritBene?.[i] || 0;
-                          hKotowarizurai[i] += d.hourly?.kotowarizurai?.[i] || 0;
-                          hClosing[i] += d.hourly?.closing?.[i] || 0;
-                          hCounter[i] += d.hourly?.counter?.[i] || 0;
+                      if (includeHourly) {
+                          for(let i=0; i<10; i++) {
+                              hUk[i] += d.hourly?.uketsuke?.[i] || 0;
+                              hFu[i] += d.hourly?.futsu?.[i] || 0;
+                              hFz[i] += d.hourly?.fuzai?.[i] || 0;
+                              hTbk[i] += d.hourly?.tantoBK?.[i] || 0;
+                              hApo[i] += d.hourly?.apo?.[i] || 0;
+                              hMokuteki[i] += d.hourly?.mokuteki?.[i] || 0;
+                              hMeritKinou[i] += d.hourly?.meritKinou?.[i] || 0;
+                              hMeritBene[i] += d.hourly?.meritBene?.[i] || 0;
+                              hKotowarizurai[i] += d.hourly?.kotowarizurai?.[i] || 0;
+                              hClosing[i] += d.hourly?.closing?.[i] || 0;
+                              hCounter[i] += d.hourly?.counter?.[i] || 0;
+                          }
                       }
                   } else {
                       // リスト/トークで絞り込み：セッション単位の内訳から該当するものだけ合算する
@@ -1965,12 +2067,8 @@
           }
       }
 
-      let totalCalls = totalUk + totalFu + totalFz + totalTbk + totalApo;
-      let totalConnects = totalTbk + totalApo;
-
-      document.getElementById("sa-total-calls").textContent = totalCalls;
-      document.getElementById("sa-connect-rate").textContent = totalCalls > 0 ? ((totalConnects / totalCalls) * 100).toFixed(1) + "%" : "0.0%";
-      document.getElementById("sa-apo-rate").textContent = totalCalls > 0 ? ((totalApo / totalCalls) * 100).toFixed(1) + "%" : "0.0%";
+      const totalCalls = totalUk + totalFu + totalFz + totalTbk + totalApo;
+      const totalConnects = totalTbk + totalApo;
 
       // コール転換ファネル（受付→担当→目的→メリット(機能)→メリット(ベネ)→断りづらい→クロージング→カウンター→アポ）
       const funnelStages = [
@@ -1984,7 +2082,6 @@
           { name: 'カウンター', count: totalCounter + totalApo },
           { name: '★アポ獲得', count: totalApo }
       ];
-      renderFunnel('sa-funnel-container', funnelStages);
 
       // ステージ別 詳細分析（到達数・通過数・通過率）
       const stageDetails = [
@@ -1995,30 +2092,71 @@
           { name: 'クロージング', reach: funnelStages[6].count, stuck: totalClosing, passed: funnelStages[7].count },
           { name: 'カウンター', reach: funnelStages[7].count, stuck: totalCounter, passed: funnelStages[8].count }
       ];
-      const stageTb = document.getElementById('sa-stage-table-body');
-      stageTb.innerHTML = '';
-      stageDetails.forEach(s => {
-          const rate = s.reach > 0 ? (s.passed / s.reach * 100) : 0;
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td style="text-align:left; font-weight:600;">${s.name}</td><td>${s.reach}</td><td>${s.stuck}</td><td>${s.passed}</td><td style="font-weight:700; color:${rate>=50?'var(--success)':(rate<20?'var(--danger)':'var(--text-main)')};">${rate.toFixed(1)}%</td>`;
-          stageTb.appendChild(tr);
-      });
 
-      // Breakdown Chart
-      const ctxBreakdown = document.getElementById('sa-breakdown-chart').getContext('2d');
-      if (breakdownChartInstance) breakdownChartInstance.destroy();
-      breakdownChartInstance = new Chart(ctxBreakdown, {
-          type: 'doughnut',
-          data: {
-              labels: ['受付BK', '不通', '担当不在', '担当BK', '★アポ'],
-              datasets: [{
-                  data: [totalUk, totalFu, totalFz, totalTbk, totalApo],
-                  backgroundColor: ['#94a3b8', '#cbd5e1', '#f87171', '#fbbf24', '#14b8a6'],
-                  borderWidth: 0
-              }]
-          },
-          options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
-      });
+      return {
+          isFiltered, totalCalls, totalConnects, totalApo,
+          totalUk, totalFu, totalFz, totalTbk,
+          funnelStages, stageDetails, dailyStats,
+          hourly: { hUk, hFu, hFz, hTbk, hApo, hMokuteki, hMeritKinou, hMeritBene, hKotowarizurai, hClosing, hCounter }
+      };
+  }
+
+  // KPI・ドーナツ内訳チャート・ファネル・ステージ別詳細テーブルを、指定したIDプレフィックスの要素に描画する
+  // （通常表示のsa-*と、比較モードのsa-a-*/sa-b-*のどちらからも呼び出せる共通処理）
+  let breakdownChartInstances = {};
+  function renderStatusPanel(prefix, data) {
+      const totalCallsEl = document.getElementById(`${prefix}-total-calls`);
+      if (totalCallsEl) totalCallsEl.textContent = data.totalCalls;
+      const connectRateEl = document.getElementById(`${prefix}-connect-rate`);
+      if (connectRateEl) connectRateEl.textContent = data.totalCalls > 0 ? ((data.totalConnects / data.totalCalls) * 100).toFixed(1) + "%" : "0.0%";
+      const apoRateEl = document.getElementById(`${prefix}-apo-rate`);
+      if (apoRateEl) apoRateEl.textContent = data.totalCalls > 0 ? ((data.totalApo / data.totalCalls) * 100).toFixed(1) + "%" : "0.0%";
+
+      renderFunnel(`${prefix}-funnel-container`, data.funnelStages);
+
+      const stageTb = document.getElementById(`${prefix}-stage-table-body`);
+      if (stageTb) {
+          stageTb.innerHTML = '';
+          data.stageDetails.forEach(s => {
+              const rate = s.reach > 0 ? (s.passed / s.reach * 100) : 0;
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td style="text-align:left; font-weight:600;">${s.name}</td><td>${s.reach}</td><td>${s.stuck}</td><td>${s.passed}</td><td style="font-weight:700; color:${rate>=50?'var(--success)':(rate<20?'var(--danger)':'var(--text-main)')};">${rate.toFixed(1)}%</td>`;
+              stageTb.appendChild(tr);
+          });
+      }
+
+      const canvasEl = document.getElementById(`${prefix}-breakdown-chart`);
+      if (canvasEl) {
+          if (breakdownChartInstances[prefix]) breakdownChartInstances[prefix].destroy();
+          breakdownChartInstances[prefix] = new Chart(canvasEl.getContext('2d'), {
+              type: 'doughnut',
+              data: {
+                  labels: ['受付BK', '不通', '担当不在', '担当BK', '★アポ'],
+                  datasets: [{
+                      data: [data.totalUk, data.totalFu, data.totalFz, data.totalTbk, data.totalApo],
+                      backgroundColor: ['#94a3b8', '#cbd5e1', '#f87171', '#fbbf24', '#14b8a6'],
+                      borderWidth: 0
+                  }]
+              },
+              options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+          });
+      }
+  }
+
+  function renderStatusAnalysis() {
+      const uFilter = document.getElementById("sa-user-select").value;
+      const pFilter = document.getElementById("sa-product-select").value;
+      const lFilter = document.getElementById("sa-list-select").value;
+      const tFilter = document.getElementById("sa-talk-select").value;
+      const sD = document.getElementById("sa-start-date").value;
+      const eD = document.getElementById("sa-end-date").value;
+
+      const data = computeStatusAnalysisData(uFilter, pFilter, lFilter, tFilter, sD, eD, true);
+      const isFiltered = data.isFiltered;
+      const { hUk, hFu, hFz, hTbk, hApo, hMokuteki, hMeritKinou, hMeritBene, hKotowarizurai, hClosing, hCounter } = data.hourly;
+      const dailyStats = data.dailyStats;
+
+      renderStatusPanel('sa', data);
 
       // Hourly Trend Chart（セッション単位では時間帯別データを持たないため、絞り込み中は表示できない）
       document.getElementById('sa-hourly-filter-note').style.display = isFiltered ? 'block' : 'none';
@@ -2132,6 +2270,35 @@
               options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
           });
       }
+
+      if (document.getElementById('sa-compare-toggle').checked) renderStatusComparison();
+  }
+
+  // --- ステータス分析：比較モード（2つの条件を横に並べて見比べる） ---
+  function toggleStatusCompareMode() {
+      const on = document.getElementById('sa-compare-toggle').checked;
+      document.getElementById('sa-compare-body').style.display = on ? 'block' : 'none';
+      if (on) renderStatusComparison();
+  }
+
+  function renderStatusComparison() {
+      if (!document.getElementById('sa-compare-toggle').checked) return;
+
+      const uA = document.getElementById("sa-a-user-select").value;
+      const pA = document.getElementById("sa-a-product-select").value;
+      const lA = document.getElementById("sa-a-list-select").value;
+      const tA = document.getElementById("sa-a-talk-select").value;
+      const sDA = document.getElementById("sa-a-start-date").value;
+      const eDA = document.getElementById("sa-a-end-date").value;
+      renderStatusPanel('sa-a', computeStatusAnalysisData(uA, pA, lA, tA, sDA, eDA, false));
+
+      const uB = document.getElementById("sa-b-user-select").value;
+      const pB = document.getElementById("sa-b-product-select").value;
+      const lB = document.getElementById("sa-b-list-select").value;
+      const tB = document.getElementById("sa-b-talk-select").value;
+      const sDB = document.getElementById("sa-b-start-date").value;
+      const eDB = document.getElementById("sa-b-end-date").value;
+      renderStatusPanel('sa-b', computeStatusAnalysisData(uB, pB, lB, tB, sDB, eDB, false));
   }
 
   function renderFunnel(containerId, stages) {
