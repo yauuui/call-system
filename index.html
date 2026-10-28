@@ -298,6 +298,17 @@
     /* AI分析パネル */
     .ai-analysis-box { font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text-main); background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; min-height: 60px; }
 
+    /* コール転換ファネル */
+    .funnel-wrap { display: flex; flex-direction: column; }
+    .funnel-stage { display: flex; align-items: center; gap: 10px; }
+    .funnel-label { width: 110px; flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--text-main); text-align: right; }
+    .funnel-bar-track { flex: 1; background: #f1f5f9; border-radius: 4px; overflow: hidden; height: 32px; }
+    .funnel-bar-fill { height: 100%; min-width: 2%; background: linear-gradient(90deg, var(--accent), #0d9488); display: flex; align-items: center; padding-left: 10px; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; transition: width 0.4s ease; }
+    .funnel-rate-connector { padding: 3px 0 3px 120px; font-size: 11px; color: var(--text-muted); }
+    .funnel-rate-connector .rate-val { font-weight: 700; }
+    .funnel-rate-connector .rate-good { color: var(--success); }
+    .funnel-rate-connector .rate-bad { color: var(--danger); }
+
   </style>
 </head>
 <body>
@@ -708,7 +719,9 @@
             <table>
               <thead>
                 <tr>
-                  <th>期間</th><th>稼働(h)</th><th>総架電</th><th>受付BK</th><th>不通</th><th>不在</th><th>担当BK</th><th>★アポ</th><th>突破率</th><th>受注率</th><th>担受注率</th><th>架電数/h</th>
+                  <th>期間</th><th>稼働(h)</th><th>総架電</th><th>受付BK</th><th>不通</th><th>不在</th><th>担当BK</th>
+                  <th>目的</th><th>メリット(機能)</th><th>メリット(ベネ)</th><th>断りづらい</th><th>クロージング</th><th>カウンター</th>
+                  <th>★アポ</th><th>突破率</th><th>受注率</th><th>担受注率</th><th>架電数/h</th>
                 </tr>
               </thead>
               <tbody id="analytics-table-body"></tbody>
@@ -780,6 +793,44 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">コール転換ファネル（受付→担当→目的→メリット(機能)→メリット(ベネ)→断りづらい→クロージング→カウンター→アポ）</div>
+          <div class="card-body">
+            <div id="sa-funnel-container" class="funnel-wrap"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">ステージ別 詳細分析（到達数・通過数・通過率）</div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr><th>ステージ</th><th>到達数</th><th>このステージで離脱</th><th>次に進んだ数</th><th>通過率</th></tr>
+              </thead>
+              <tbody id="sa-stage-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="card">
+            <div class="card-header">時間帯別 転換率の推移（受付突破率・アポ率）</div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 220px;">
+                <canvas id="sa-rate-hourly-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">時間帯別 ステージ離脱の内訳</div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 220px;">
+                <canvas id="sa-substep-hourly-chart"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -963,6 +1014,8 @@
   let breakdownChartInstance = null;
   let hourlyChartInstance = null;
   let dailyChartInstance = null;
+  let rateHourlyChartInstance = null;
+  let substepHourlyChartInstance = null;
 
   let isMiniMode = false;
 
@@ -979,18 +1032,28 @@
   function getEmptyState() {
     return {
       counts: Array(10).fill(0),
-      hourly: { 
-          uketsuke: Array(10).fill(0), 
-          futsu: Array(10).fill(0), 
-          fuzai: Array(10).fill(0), 
-          tantoBK: Array(10).fill(0), 
+      hourly: {
+          uketsuke: Array(10).fill(0),
+          futsu: Array(10).fill(0),
+          fuzai: Array(10).fill(0),
+          tantoBK: Array(10).fill(0),
           apo: Array(10).fill(0),
-          time: Array(10).fill(0)
+          time: Array(10).fill(0),
+          mokuteki: Array(10).fill(0),
+          meritKinou: Array(10).fill(0),
+          meritBene: Array(10).fill(0),
+          kotowarizurai: Array(10).fill(0),
+          closing: Array(10).fill(0),
+          counter: Array(10).fill(0)
       },
       timerSeconds: 0, targetQualitative: "", targetApo: 3, targetCph: 20, memo: ""
     };
   }
-  
+
+  // counts[3..8] の各ステージIDと、時間帯別内訳を記録するhourlyキーの対応表
+  const SUBSTEP_HOURLY_KEYS = { 3: 'mokuteki', 4: 'meritKinou', 5: 'meritBene', 6: 'kotowarizurai', 7: 'closing', 8: 'counter' };
+  const SUBSTEP_LABELS = { 3: '目的', 4: 'メリット(機能)', 5: 'メリット(ベネ)', 6: '断りづらい', 7: 'クロージング', 8: 'カウンター' };
+
   function getEmptyScriptState() {
       return { scripts: [], counters: [], knowledge: { product: "", competitor: "" } };
   }
@@ -1646,27 +1709,32 @@
       const eD = document.getElementById("sa-end-date").value;
 
       let totalUk = 0, totalFu = 0, totalFz = 0, totalTbk = 0, totalApo = 0;
+      let totalMokuteki = 0, totalMeritKinou = 0, totalMeritBene = 0, totalKotowarizurai = 0, totalClosing = 0, totalCounter = 0;
       let hUk = Array(10).fill(0), hFu = Array(10).fill(0), hFz = Array(10).fill(0), hTbk = Array(10).fill(0), hApo = Array(10).fill(0);
-      let dailyStats = {}; 
+      let hMokuteki = Array(10).fill(0), hMeritKinou = Array(10).fill(0), hMeritBene = Array(10).fill(0), hKotowarizurai = Array(10).fill(0), hClosing = Array(10).fill(0), hCounter = Array(10).fill(0);
+      let dailyStats = {};
 
       for (const user in appData) {
           if (uFilter !== "__ALL_USERS__" && user !== uFilter) continue;
           for (const date in appData[user]) {
               if (sD && date < sD) continue;
               if (eD && date > eD) continue;
-              
+
               if (!dailyStats[date]) dailyStats[date] = { uk: 0, fz: 0, tbk: 0, apo: 0 };
 
               for (const p in appData[user][date]) {
                   if (pFilter !== "__ALL_PRODUCTS__" && p !== pFilter) continue;
                   let d = appData[user][date][p];
-                  
+
                   let c = d.counts || Array(10).fill(0);
                   let uk = c[0]||0; let fu = c[1]||0; let fz = c[2]||0;
-                  let tbk = (c[3]||0)+(c[4]||0)+(c[5]||0)+(c[6]||0)+(c[7]||0)+(c[8]||0);
+                  let mokuteki = c[3]||0, meritKinou = c[4]||0, meritBene = c[5]||0, kotowarizurai = c[6]||0, closing = c[7]||0, counter = c[8]||0;
+                  let tbk = mokuteki+meritKinou+meritBene+kotowarizurai+closing+counter;
                   let apo = c[9]||0;
 
                   totalUk += uk; totalFu += fu; totalFz += fz; totalTbk += tbk; totalApo += apo;
+                  totalMokuteki += mokuteki; totalMeritKinou += meritKinou; totalMeritBene += meritBene;
+                  totalKotowarizurai += kotowarizurai; totalClosing += closing; totalCounter += counter;
 
                   dailyStats[date].uk += uk;
                   dailyStats[date].fz += fz;
@@ -1679,6 +1747,12 @@
                       hFz[i] += d.hourly?.fuzai?.[i] || 0;
                       hTbk[i] += d.hourly?.tantoBK?.[i] || 0;
                       hApo[i] += d.hourly?.apo?.[i] || 0;
+                      hMokuteki[i] += d.hourly?.mokuteki?.[i] || 0;
+                      hMeritKinou[i] += d.hourly?.meritKinou?.[i] || 0;
+                      hMeritBene[i] += d.hourly?.meritBene?.[i] || 0;
+                      hKotowarizurai[i] += d.hourly?.kotowarizurai?.[i] || 0;
+                      hClosing[i] += d.hourly?.closing?.[i] || 0;
+                      hCounter[i] += d.hourly?.counter?.[i] || 0;
                   }
               }
           }
@@ -1690,7 +1764,39 @@
       document.getElementById("sa-total-calls").textContent = totalCalls;
       document.getElementById("sa-connect-rate").textContent = totalCalls > 0 ? ((totalConnects / totalCalls) * 100).toFixed(1) + "%" : "0.0%";
       document.getElementById("sa-apo-rate").textContent = totalCalls > 0 ? ((totalApo / totalCalls) * 100).toFixed(1) + "%" : "0.0%";
-      
+
+      // コール転換ファネル（受付→担当→目的→メリット(機能)→メリット(ベネ)→断りづらい→クロージング→カウンター→アポ）
+      const funnelStages = [
+          { name: '総架電', count: totalCalls },
+          { name: '担当到達', count: totalCalls - totalUk - totalFu },
+          { name: '目的', count: totalTbk + totalApo },
+          { name: 'メリット(機能)', count: totalTbk + totalApo - totalMokuteki },
+          { name: 'メリット(ベネ)', count: totalTbk + totalApo - totalMokuteki - totalMeritKinou },
+          { name: '断りづらい', count: totalTbk + totalApo - totalMokuteki - totalMeritKinou - totalMeritBene },
+          { name: 'クロージング', count: totalTbk + totalApo - totalMokuteki - totalMeritKinou - totalMeritBene - totalKotowarizurai },
+          { name: 'カウンター', count: totalCounter + totalApo },
+          { name: '★アポ獲得', count: totalApo }
+      ];
+      renderFunnel('sa-funnel-container', funnelStages);
+
+      // ステージ別 詳細分析（到達数・通過数・通過率）
+      const stageDetails = [
+          { name: '目的', reach: funnelStages[2].count, stuck: totalMokuteki, passed: funnelStages[3].count },
+          { name: 'メリット(機能)', reach: funnelStages[3].count, stuck: totalMeritKinou, passed: funnelStages[4].count },
+          { name: 'メリット(ベネ)', reach: funnelStages[4].count, stuck: totalMeritBene, passed: funnelStages[5].count },
+          { name: '断りづらい', reach: funnelStages[5].count, stuck: totalKotowarizurai, passed: funnelStages[6].count },
+          { name: 'クロージング', reach: funnelStages[6].count, stuck: totalClosing, passed: funnelStages[7].count },
+          { name: 'カウンター', reach: funnelStages[7].count, stuck: totalCounter, passed: funnelStages[8].count }
+      ];
+      const stageTb = document.getElementById('sa-stage-table-body');
+      stageTb.innerHTML = '';
+      stageDetails.forEach(s => {
+          const rate = s.reach > 0 ? (s.passed / s.reach * 100) : 0;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td style="text-align:left; font-weight:600;">${s.name}</td><td>${s.reach}</td><td>${s.stuck}</td><td>${s.passed}</td><td style="font-weight:700; color:${rate>=50?'var(--success)':(rate<20?'var(--danger)':'var(--text-main)')};">${rate.toFixed(1)}%</td>`;
+          stageTb.appendChild(tr);
+      });
+
       // Breakdown Chart
       const ctxBreakdown = document.getElementById('sa-breakdown-chart').getContext('2d');
       if (breakdownChartInstance) breakdownChartInstance.destroy();
@@ -1765,7 +1871,74 @@
               }
           }
       });
+
+      // 時間帯別 転換率の推移（受付突破率・アポ率）
+      const ctxRateHourly = document.getElementById('sa-rate-hourly-chart').getContext('2d');
+      if (rateHourlyChartInstance) rateHourlyChartInstance.destroy();
+      const hLabels = ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'];
+      const hBreakthroughRate = hUk.map((v, i) => {
+          const tot = hUk[i] + hFu[i] + hFz[i] + hTbk[i] + hApo[i];
+          return tot > 0 ? +(((hTbk[i] + hApo[i]) / tot) * 100).toFixed(1) : 0;
+      });
+      const hApoRate = hUk.map((v, i) => {
+          const tot = hUk[i] + hFu[i] + hFz[i] + hTbk[i] + hApo[i];
+          return tot > 0 ? +((hApo[i] / tot) * 100).toFixed(1) : 0;
+      });
+      rateHourlyChartInstance = new Chart(ctxRateHourly, {
+          type: 'line',
+          data: {
+              labels: hLabels,
+              datasets: [
+                  { label: '受付突破率(%)', data: hBreakthroughRate, borderColor: '#fbbf24', backgroundColor: '#fbbf24', fill: false, tension: 0.3, borderWidth: 2 },
+                  { label: 'アポ率(%)', data: hApoRate, borderColor: '#14b8a6', backgroundColor: '#14b8a6', fill: false, tension: 0.3, borderWidth: 3 }
+              ]
+          },
+          options: { maintainAspectRatio: false, scales: { y: { ticks: { callback: v => v + '%' } } } }
+      });
+
+      // 時間帯別 ステージ離脱の内訳（目的/メリット(機能)/メリット(ベネ)/断りづらい/クロージング/カウンターで離脱した件数）
+      const ctxSubstepHourly = document.getElementById('sa-substep-hourly-chart').getContext('2d');
+      if (substepHourlyChartInstance) substepHourlyChartInstance.destroy();
+      substepHourlyChartInstance = new Chart(ctxSubstepHourly, {
+          type: 'bar',
+          data: {
+              labels: hLabels,
+              datasets: [
+                  { label: '目的', data: hMokuteki, backgroundColor: '#60a5fa' },
+                  { label: 'メリット(機能)', data: hMeritKinou, backgroundColor: '#34d399' },
+                  { label: 'メリット(ベネ)', data: hMeritBene, backgroundColor: '#a78bfa' },
+                  { label: '断りづらい', data: hKotowarizurai, backgroundColor: '#fb923c' },
+                  { label: 'クロージング', data: hClosing, backgroundColor: '#f87171' },
+                  { label: 'カウンター', data: hCounter, backgroundColor: '#facc15' }
+              ]
+          },
+          options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+      });
   }
+
+  function renderFunnel(containerId, stages) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const baseCount = stages[0]?.count || 0;
+      let html = '';
+      stages.forEach((stage, idx) => {
+          const pct = baseCount > 0 ? Math.max(2, (stage.count / baseCount) * 100) : 0;
+          html += `
+            <div class="funnel-stage">
+              <div class="funnel-label">${stage.name}</div>
+              <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${pct}%;">${stage.count}件</div></div>
+            </div>`;
+          if (idx < stages.length - 1) {
+              const next = stages[idx + 1];
+              const rate = stage.count > 0 ? (next.count / stage.count * 100) : 0;
+              const lost = stage.count - next.count;
+              const rateClass = rate >= 50 ? 'rate-good' : (rate < 20 ? 'rate-bad' : '');
+              html += `<div class="funnel-rate-connector">↓ 通過率 <span class="rate-val ${rateClass}">${rate.toFixed(1)}%</span>（離脱 ${lost}件）</div>`;
+          }
+      });
+      container.innerHTML = html;
+  }
+
 
   // --- AI分析（苦手傾向と改善方法） ---
   function collectStatusStatsForAI() {
@@ -2228,7 +2401,7 @@
     for (let prod in dayObj) {
       const pState = dayObj[prod]; agg.timerSeconds += pState.timerSeconds || 0; 
       for (let i=0; i<10; i++) agg.counts[i] += pState.counts[i] || 0;
-      ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo', 'time'].forEach(k => { 
+      ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo', 'time', 'mokuteki', 'meritKinou', 'meritBene', 'kotowarizurai', 'closing', 'counter'].forEach(k => {
           for(let i=0; i<10; i++) {
               if(!agg.hourly[k]) agg.hourly[k] = Array(10).fill(0);
               agg.hourly[k][i] += pState.hourly[k]?.[i] || 0; 
@@ -2298,7 +2471,16 @@
     let newVal = Math.max(0, oldVal + actualDelta); 
     if (oldVal === newVal) return;
     state.counts[id] = newVal; const c = getHourColIdx();
-    if(id===0) state.hourly.uketsuke[c] = Math.max(0, state.hourly.uketsuke[c]+actualDelta); else if(id===1) state.hourly.futsu[c] = Math.max(0, state.hourly.futsu[c]+actualDelta); else if(id===2) state.hourly.fuzai[c] = Math.max(0, state.hourly.fuzai[c]+actualDelta); else if(id>=3 && id<=8) state.hourly.tantoBK[c] = Math.max(0, state.hourly.tantoBK[c]+actualDelta); else if(id===9) state.hourly.apo[c] = Math.max(0, state.hourly.apo[c]+actualDelta);
+    if(id===0) state.hourly.uketsuke[c] = Math.max(0, state.hourly.uketsuke[c]+actualDelta);
+    else if(id===1) state.hourly.futsu[c] = Math.max(0, state.hourly.futsu[c]+actualDelta);
+    else if(id===2) state.hourly.fuzai[c] = Math.max(0, state.hourly.fuzai[c]+actualDelta);
+    else if(id>=3 && id<=8) {
+      state.hourly.tantoBK[c] = Math.max(0, state.hourly.tantoBK[c]+actualDelta);
+      const key = SUBSTEP_HOURLY_KEYS[id];
+      if (!state.hourly[key]) state.hourly[key] = Array(10).fill(0);
+      state.hourly[key][c] = Math.max(0, (state.hourly[key][c]||0)+actualDelta);
+    }
+    else if(id===9) state.hourly.apo[c] = Math.max(0, state.hourly.apo[c]+actualDelta);
     saveData(); render();
   }
 
@@ -2650,12 +2832,14 @@
       }
     }
     const sK = Object.keys(res).sort((a,b)=>b.localeCompare(a));
-    if(!sK.length) return tb.innerHTML='<tr><td colspan="12" style="padding:30px; text-align:center; color:#888;">データがありません</td></tr>';
+    if(!sK.length) return tb.innerHTML='<tr><td colspan="18" style="padding:30px; text-align:center; color:#888;">データがありません</td></tr>';
     sK.forEach(k=>{
-      let d=res[k], c=d.c, t=d.t, uk=c[0], fu=c[1], fuz=c[2], tbk=c[3]+c[4]+c[5]+c[6]+c[7]+c[8], apo=c[9], hc=tbk+apo, tot=uk+fu+fuz+hc;
+      let d=res[k], c=d.c, t=d.t, uk=c[0], fu=c[1], fuz=c[2];
+      let mokuteki=c[3], meritKinou=c[4], meritBene=c[5], kotowarizurai=c[6], closing=c[7], counter=c[8];
+      let tbk=mokuteki+meritKinou+meritBene+kotowarizurai+closing+counter, apo=c[9], hc=tbk+apo, tot=uk+fu+fuz+hc;
       if(tot===0 && t===0) return;
       let tr=document.createElement("tr");
-      tr.innerHTML=`<td style="font-weight:600; color:var(--accent); text-align:left;">${k}</td><td>${(t/3600).toFixed(1)}</td><td style="font-weight:700;">${tot}</td><td>${uk}</td><td>${fu}</td><td>${fuz}</td><td>${tbk}</td><td style="color:var(--danger); font-weight:700;">${apo}</td><td>${tot>0?((hc/tot)*100).toFixed(1):'0.0'}%</td><td>${tot>0?((apo/tot)*100).toFixed(1):'0.0'}%</td><td>${hc>0?((apo/hc)*100).toFixed(1):'0.0'}%</td><td style="background:#f4f6f9; font-weight:700;">${t>0?(tot/(t/3600)).toFixed(1):'0.0'}</td>`;
+      tr.innerHTML=`<td style="font-weight:600; color:var(--accent); text-align:left;">${k}</td><td>${(t/3600).toFixed(1)}</td><td style="font-weight:700;">${tot}</td><td>${uk}</td><td>${fu}</td><td>${fuz}</td><td>${tbk}</td><td>${mokuteki}</td><td>${meritKinou}</td><td>${meritBene}</td><td>${kotowarizurai}</td><td>${closing}</td><td>${counter}</td><td style="color:var(--danger); font-weight:700;">${apo}</td><td>${tot>0?((hc/tot)*100).toFixed(1):'0.0'}%</td><td>${tot>0?((apo/tot)*100).toFixed(1):'0.0'}%</td><td>${hc>0?((apo/hc)*100).toFixed(1):'0.0'}%</td><td style="background:#f4f6f9; font-weight:700;">${t>0?(tot/(t/3600)).toFixed(1):'0.0'}</td>`;
       tb.appendChild(tr);
     });
   }
