@@ -395,6 +395,10 @@
         <span class="nav-icon"><svg class="icon"><use href="#icon-trend"></use></svg></span>
         <span>ステータス分析</span>
       </li>
+      <li class="nav-item" id="nav-listanalysis" onclick="switchTab('listanalysis')">
+        <span class="nav-icon"><svg class="icon"><use href="#icon-clipboard"></use></svg></span>
+        <span>リスト/トーク分析</span>
+      </li>
       <li class="nav-item" id="nav-ranking" onclick="switchTab('ranking')">
         <span class="nav-icon"><svg class="icon"><use href="#icon-trophy"></use></svg></span>
         <span>チームランキング</span>
@@ -459,6 +463,14 @@
             <div class="filter-group" id="filter-product-wrap">
               <label><svg class="icon"><use href="#icon-box"></use></svg> 商材</label>
               <select id="product-select" onchange="handleSelectionChange()"></select>
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-clipboard"></use></svg> リスト</label>
+              <select id="list-select" onchange="handleSelectionChange()"></select>
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-message"></use></svg> トーク</label>
+              <select id="talk-select" onchange="handleSelectionChange()"></select>
             </div>
           </div>
           <div class="action-btns">
@@ -846,6 +858,58 @@
         </div>
       </div>
 
+      <!-- =================【タブ: リスト/トーク分析画面】================= -->
+      <div id="page-listanalysis" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
+        <div class="toolbar">
+          <div class="filters">
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-user"></use></svg> アカウント</label>
+              <select id="la-user-select" onchange="renderListAnalysis()"></select>
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-box"></use></svg> 商材</label>
+              <select id="la-product-select" onchange="renderListAnalysis()"></select>
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-clipboard"></use></svg> リスト</label>
+              <select id="la-list-select" onchange="renderListAnalysis()"></select>
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-message"></use></svg> トーク</label>
+              <select id="la-talk-select" onchange="renderListAnalysis()"></select>
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-calendar"></use></svg> 期間</label>
+              <input type="date" id="la-start-date" onchange="renderListAnalysis()">
+              <span style="margin: 0 4px; color: var(--text-muted);">〜</span>
+              <input type="date" id="la-end-date" onchange="renderListAnalysis()">
+            </div>
+            <div class="filter-group">
+              <label><svg class="icon"><use href="#icon-chart"></use></svg> 集計軸</label>
+              <select id="la-group-by" onchange="renderListAnalysis()">
+                <option value="list">リスト別</option>
+                <option value="talk">トーク別</option>
+                <option value="both">リスト×トーク別</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">リスト/トーク別 数値分析（集計軸で選んだ単位ごとに、受付突破率・アポ率・架電数/hなどを比較できます）</div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>グループ</th><th>稼働(h)</th><th>総架電</th><th>受付BK</th><th>不通</th><th>不在</th><th>担当BK</th><th>★アポ</th><th>突破率</th><th>アポ率</th><th>担受注率</th><th>架電数/h</th>
+                </tr>
+              </thead>
+              <tbody id="la-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- =================【タブ6: チームランキング画面】================= -->
       <div id="page-ranking" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="card">
@@ -946,6 +1010,16 @@
         <div class="add-group"><input type="text" id="new-product-input" placeholder="商材名"><button onclick="addProduct()">追加</button></div>
         <ul class="settings-list" id="settings-products-list"></ul>
       </div>
+      <div style="margin-top:25px;">
+        <h3 style="font-size:13px; color:#666; margin-bottom:10px;"><svg class="icon" style="vertical-align:bottom; margin-right:4px;"><use href="#icon-clipboard"></use></svg>リスト管理（製造業新規リスト、担当BKリスト等）</h3>
+        <div class="add-group"><input type="text" id="new-list-input" placeholder="リスト名"><button onclick="addCallList()">追加</button></div>
+        <ul class="settings-list" id="settings-lists-list"></ul>
+      </div>
+      <div style="margin-top:25px;">
+        <h3 style="font-size:13px; color:#666; margin-bottom:10px;"><svg class="icon" style="vertical-align:bottom; margin-right:4px;"><use href="#icon-message"></use></svg>トーク管理（トークスクリプトのバージョン）</h3>
+        <div class="add-group"><input type="text" id="new-talk-input" placeholder="トーク名（例：トークv2）"><button onclick="addTalk()">追加</button></div>
+        <ul class="settings-list" id="settings-talks-list"></ul>
+      </div>
     </div>
   </div>
 </div>
@@ -987,6 +1061,7 @@
   const defaultUsers = ["新田 健介", "伊藤 篤永", "坂田 蘭", "岡本 匠平", "内田 翼太", "今泉 尚大", "宮崎 駿斗", "佐藤 健", "吉田 悠生", "迎 莉央", "林 真志", "前田 浩明"];
   const defaultProducts = ["Bill One", "Bill One経費", "Sansan", "YOMEL", "bakuraku発行", "bakuraku受領", "LAWGUE", "eigthteam"];
   const ALL_PRODUCTS_KEY = "__ALL__";
+  const UNSET_LABEL = "未設定";
 
   const items = [
     { name: "受付BK", id: 0 }, { name: "不通", id: 1 }, { name: "担当不在", id: 2 },
@@ -996,8 +1071,10 @@
   ];
 
   let usersList = []; let productsList = []; let productSettings = {};
+  let listsList = []; let talksList = [];
   let currentUser = ""; let currentDateStr = ""; let currentProduct = "";
-  let appData = {}; 
+  let currentList = ""; let currentTalk = "";
+  let appData = {};
   let timerInterval = null; let startTime = 0; let isRunning = false;
   let db = null;
   
@@ -1054,6 +1131,20 @@
   const SUBSTEP_HOURLY_KEYS = { 3: 'mokuteki', 4: 'meritKinou', 5: 'meritBene', 6: 'kotowarizurai', 7: 'closing', 8: 'counter' };
   const SUBSTEP_LABELS = { 3: '目的', 4: 'メリット(機能)', 5: 'メリット(ベネ)', 6: '断りづらい', 7: 'クロージング', 8: 'カウンター' };
 
+  // --- リスト／トークごとの内訳（セッション）管理 ---
+  // 既存のcounts/hourly/timerSecondsはそのまま1日・1商材の合計として扱い、
+  // リスト・トークごとの内訳は加算専用の別フィールド(sessionsByKey)に記録する。
+  // こうすることで、既存の集計処理（ステータス分析・数値分析・CSV出力・KPI等）は一切変更せずに済む。
+  function getSessionKey(list, talk) { return `${list || UNSET_LABEL}||${talk || UNSET_LABEL}`; }
+  function ensureSession(state, list, talk) {
+    if (!state.sessionsByKey) state.sessionsByKey = {};
+    const key = getSessionKey(list, talk);
+    if (!state.sessionsByKey[key]) {
+      state.sessionsByKey[key] = { list: list || UNSET_LABEL, talk: talk || UNSET_LABEL, counts: Array(10).fill(0), timerSeconds: 0 };
+    }
+    return state.sessionsByKey[key];
+  }
+
   function getEmptyScriptState() {
       return { scripts: [], counters: [], knowledge: { product: "", competitor: "" } };
   }
@@ -1063,6 +1154,8 @@
     usersList = JSON.parse(localStorage.getItem("kaden_users_list")) || [...defaultUsers];
     productsList = JSON.parse(localStorage.getItem("kaden_products_list")) || [...defaultProducts];
     productSettings = JSON.parse(localStorage.getItem("kaden_product_settings")) || { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
+    listsList = JSON.parse(localStorage.getItem("kaden_lists_list")) || [];
+    talksList = JSON.parse(localStorage.getItem("kaden_talks_list")) || [];
     const savedData = localStorage.getItem("kaden_app_data_v4");
     if (savedData) appData = JSON.parse(savedData);
     scriptData.team = JSON.parse(localStorage.getItem("kaden_team_scripts")) || {};
@@ -1100,10 +1193,13 @@
           productsList = data.products || [...defaultProducts];
           productSettings = data.productSettings || { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
           scriptData.team = data.scripts || {};
+          listsList = data.lists || [];
+          talksList = data.talks || [];
         } else {
           usersList = [...defaultUsers]; productsList = [...defaultProducts];
           productSettings = { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
-          db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, scripts: {} });
+          listsList = []; talksList = [];
+          db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, scripts: {}, lists: listsList, talks: talksList });
         }
         updateSelectUIs();
         if(document.getElementById("page-script").style.display === "flex") renderScriptContent();
@@ -1142,6 +1238,7 @@
           if (document.getElementById("page-status").style.display === "flex") renderStatusAnalysis();
           if (document.getElementById("page-ranking").style.display === "flex") renderPeriodRankings();
           if (document.getElementById("page-analytics").style.display === "flex") renderAnalytics();
+          if (document.getElementById("page-listanalysis").style.display === "flex") renderListAnalysis();
         }
         isInitialLoad = false;
         document.getElementById("loading-overlay").style.display = "none";
@@ -1215,7 +1312,7 @@
 
   // --- タブ切り替え処理 ---
   function switchTab(tabName) {
-    const tabs = ['counter', 'ranking', 'analytics', 'script', 'kpi', 'status'];
+    const tabs = ['counter', 'ranking', 'analytics', 'script', 'kpi', 'status', 'listanalysis'];
     tabs.forEach(t => {
       document.getElementById(`nav-${t}`).className = (t === tabName) ? "nav-item active" : "nav-item";
       document.getElementById(`page-${t}`).style.display = (t === tabName) ? "flex" : "none";
@@ -1227,6 +1324,7 @@
         'kpi': 'KPI / KGI',
         'analytics': '数値分析レポート',
         'status': 'ステータス分析',
+        'listanalysis': 'リスト/トーク分析',
         'ranking': 'チームランキング'
     };
     document.getElementById("breadcrumb-current").textContent = titles[tabName];
@@ -1237,12 +1335,25 @@
     else if(tabName === 'script') loadScriptData();
     else if(tabName === 'kpi') loadKpiData();
     else if(tabName === 'status') renderStatusAnalysis();
+    else if(tabName === 'listanalysis') renderListAnalysis();
   }
 
   function updateSelectUIs() {
     const pSel = document.getElementById("product-select"); pSel.innerHTML = "";
     pSel.add(new Option("【全商材まとめ (閲覧のみ)】", ALL_PRODUCTS_KEY));
     productsList.forEach(p => pSel.add(new Option(p, p))); pSel.value = currentProduct;
+
+    const lSel = document.getElementById("list-select");
+    lSel.innerHTML = "";
+    lSel.add(new Option(UNSET_LABEL, ""));
+    listsList.forEach(l => lSel.add(new Option(l, l)));
+    lSel.value = listsList.includes(currentList) ? currentList : "";
+
+    const tSel = document.getElementById("talk-select");
+    tSel.innerHTML = "";
+    tSel.add(new Option(UNSET_LABEL, ""));
+    talksList.forEach(t => tSel.add(new Option(t, t)));
+    tSel.value = talksList.includes(currentTalk) ? currentTalk : "";
 
     const huSel = document.getElementById("hourly-user-select");
     const curHu = huSel.value || currentUser;
@@ -1276,7 +1387,18 @@
     productsList.forEach(p => sSel.add(new Option(p, p)));
     if (productsList.includes(currentScriptVal)) sSel.value = currentScriptVal;
     else if (productsList.length > 0) sSel.value = productsList[0];
-    
+
+    const laUSel = document.getElementById("la-user-select"); laUSel.innerHTML = '<option value="__ALL_USERS__">【全員の合計】</option>';
+    usersList.forEach(u => laUSel.add(new Option(u, u)));
+    const laPSel = document.getElementById("la-product-select"); laPSel.innerHTML = '<option value="__ALL_PRODUCTS__">【全商材の合計】</option>';
+    productsList.forEach(p => laPSel.add(new Option(p, p)));
+    const laLSel = document.getElementById("la-list-select"); laLSel.innerHTML = '<option value="__ALL__">【全リスト】</option>';
+    listsList.forEach(l => laLSel.add(new Option(l, l)));
+    laLSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
+    const laTSel = document.getElementById("la-talk-select"); laTSel.innerHTML = '<option value="__ALL__">【全トーク】</option>';
+    talksList.forEach(t => laTSel.add(new Option(t, t)));
+    laTSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
+
     const loginSel = document.getElementById("login-user-select");
     if(loginSel.style.display !== "none"){
         loginSel.innerHTML = "";
@@ -2332,11 +2454,35 @@
             </div>
         </li>`;
     });
+    const lList = document.getElementById("settings-lists-list"); lList.innerHTML = "";
+    listsList.forEach(l => lList.innerHTML += `<li>${escapeHTML(l)} <button class="btn-del" onclick="deleteCallList('${l.replace(/'/g, "\\'")}')">削除</button></li>`);
+    const tList = document.getElementById("settings-talks-list"); tList.innerHTML = "";
+    talksList.forEach(t => tList.innerHTML += `<li>${escapeHTML(t)} <button class="btn-del" onclick="deleteTalk('${t.replace(/'/g, "\\'")}')">削除</button></li>`);
   }
-  
+
   function saveSettingsConfig() {
-    if(db) db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings }, {merge: true});
-    else { localStorage.setItem("kaden_users_list", JSON.stringify(usersList)); localStorage.setItem("kaden_products_list", JSON.stringify(productsList)); localStorage.setItem("kaden_product_settings", JSON.stringify(productSettings)); }
+    if(db) db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, lists: listsList, talks: talksList }, {merge: true});
+    else {
+        localStorage.setItem("kaden_users_list", JSON.stringify(usersList));
+        localStorage.setItem("kaden_products_list", JSON.stringify(productsList));
+        localStorage.setItem("kaden_product_settings", JSON.stringify(productSettings));
+        localStorage.setItem("kaden_lists_list", JSON.stringify(listsList));
+        localStorage.setItem("kaden_talks_list", JSON.stringify(talksList));
+    }
+  }
+  function addCallList() {
+    const val = document.getElementById("new-list-input").value.trim();
+    if(val && !listsList.includes(val)){ listsList.push(val); saveSettingsConfig(); updateSelectUIs(); renderSettingsLists(); document.getElementById("new-list-input").value="";}
+  }
+  function deleteCallList(l) {
+    if(confirm(`「${l}」を削除しますか？\n（過去に記録済みの数値は保持されます）`)){ listsList = listsList.filter(x=>x!==l); saveSettingsConfig(); if(currentList===l) currentList=""; updateSelectUIs(); renderSettingsLists(); }
+  }
+  function addTalk() {
+    const val = document.getElementById("new-talk-input").value.trim();
+    if(val && !talksList.includes(val)){ talksList.push(val); saveSettingsConfig(); updateSelectUIs(); renderSettingsLists(); document.getElementById("new-talk-input").value="";}
+  }
+  function deleteTalk(t) {
+    if(confirm(`「${t}」を削除しますか？\n（過去に記録済みの数値は保持されます）`)){ talksList = talksList.filter(x=>x!==t); saveSettingsConfig(); if(currentTalk===t) currentTalk=""; updateSelectUIs(); renderSettingsLists(); }
   }
   function addUser() {
     const val = document.getElementById("new-user-input").value.trim();
@@ -2372,8 +2518,10 @@
   }
 
   function handleSelectionChange() {
-    currentDateStr = document.getElementById("date-picker").value || currentDateStr; 
+    currentDateStr = document.getElementById("date-picker").value || currentDateStr;
     currentProduct = document.getElementById("product-select").value;
+    currentList = document.getElementById("list-select").value;
+    currentTalk = document.getElementById("talk-select").value;
     document.getElementById("date-picker").value = currentDateStr;
     const isAll = (currentProduct === ALL_PRODUCTS_KEY);
     
@@ -2424,8 +2572,8 @@
   }
   
   function saveData() {
-    if (currentProduct === ALL_PRODUCTS_KEY) return; 
-    if (isRunning) { 
+    if (currentProduct === ALL_PRODUCTS_KEY) return;
+    if (isRunning) {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         if (elapsed > 0) {
             let state = appData[currentUser][currentDateStr][currentProduct];
@@ -2436,7 +2584,10 @@
             let hIdx = getHourColIdx();
             state.hourly.time[hIdx] += elapsed;
 
-            startTime += elapsed * 1000; 
+            const sess = ensureSession(state, currentList, currentTalk);
+            sess.timerSeconds = (sess.timerSeconds || 0) + elapsed;
+
+            startTime += elapsed * 1000;
         }
     }
     saveDataCloudOnly();
@@ -2481,6 +2632,10 @@
       state.hourly[key][c] = Math.max(0, (state.hourly[key][c]||0)+actualDelta);
     }
     else if(id===9) state.hourly.apo[c] = Math.max(0, state.hourly.apo[c]+actualDelta);
+
+    const sess = ensureSession(state, currentList, currentTalk);
+    sess.counts[id] = Math.max(0, (sess.counts[id]||0) + actualDelta);
+
     saveData(); render();
   }
 
@@ -2801,6 +2956,62 @@
 
     [...stats].sort((a,b) => b.cph - a.cph).forEach((s, i) => { cphList.innerHTML += `<li class="rank-item">${getMedalHTML(i)}<span class="rank-name">${s.name}</span><span class="rank-val">${s.cph.toFixed(1)} 件/h</span></li>`; });
     [...stats].sort((a,b) => b.apo - a.apo).forEach((s, i) => { apoList.innerHTML += `<li class="rank-item">${getMedalHTML(i)}<span class="rank-name">${s.name}</span><span class="rank-val">${s.apo} 件</span></li>`; });
+  }
+
+  // --- リスト/トーク分析 ---
+  function renderListAnalysis() {
+    const uFilter = document.getElementById("la-user-select").value;
+    const pFilter = document.getElementById("la-product-select").value;
+    const lFilter = document.getElementById("la-list-select").value;
+    const tFilter = document.getElementById("la-talk-select").value;
+    const sD = document.getElementById("la-start-date").value;
+    const eD = document.getElementById("la-end-date").value;
+    const groupBy = document.getElementById("la-group-by").value;
+
+    let groups = {};
+
+    for (const user in appData) {
+      if (uFilter !== "__ALL_USERS__" && user !== uFilter) continue;
+      for (const date in appData[user]) {
+        if (sD && date < sD) continue;
+        if (eD && date > eD) continue;
+        for (const p in appData[user][date]) {
+          if (pFilter !== "__ALL_PRODUCTS__" && p !== pFilter) continue;
+          const state = appData[user][date][p];
+          const sessions = state.sessionsByKey || {};
+          for (const key in sessions) {
+            const sess = sessions[key];
+            if (lFilter !== "__ALL__" && sess.list !== lFilter) continue;
+            if (tFilter !== "__ALL__" && sess.talk !== tFilter) continue;
+
+            let groupKey;
+            if (groupBy === "list") groupKey = sess.list;
+            else if (groupBy === "talk") groupKey = sess.talk;
+            else groupKey = `${sess.list} / ${sess.talk}`;
+
+            if (!groups[groupKey]) groups[groupKey] = { t: 0, c: Array(10).fill(0) };
+            groups[groupKey].t += sess.timerSeconds || 0;
+            for (let i = 0; i < 10; i++) groups[groupKey].c[i] += sess.counts[i] || 0;
+          }
+        }
+      }
+    }
+
+    const tb = document.getElementById("la-table-body"); tb.innerHTML = "";
+    const groupKeys = Object.keys(groups).sort();
+    if (!groupKeys.length) {
+      tb.innerHTML = '<tr><td colspan="11" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>';
+      return;
+    }
+
+    groupKeys.forEach(k => {
+      const g = groups[k], c = g.c, t = g.t;
+      const uk = c[0]||0, fu = c[1]||0, fuz = c[2]||0;
+      const tbk = (c[3]||0)+(c[4]||0)+(c[5]||0)+(c[6]||0)+(c[7]||0)+(c[8]||0), apo = c[9]||0, hc = tbk+apo, tot = uk+fu+fuz+hc;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td style="font-weight:600; color:var(--accent); text-align:left;">${escapeHTML(k)}</td><td>${(t/3600).toFixed(1)}</td><td style="font-weight:700;">${tot}</td><td>${uk}</td><td>${fu}</td><td>${fuz}</td><td>${tbk}</td><td style="color:var(--danger); font-weight:700;">${apo}</td><td>${tot>0?((hc/tot)*100).toFixed(1):'0.0'}%</td><td>${tot>0?((apo/tot)*100).toFixed(1):'0.0'}%</td><td>${hc>0?((apo/hc)*100).toFixed(1):'0.0'}%</td><td style="background:#f4f6f9; font-weight:700;">${t>0?(tot/(t/3600)).toFixed(1):'0.0'}</td>`;
+      tb.appendChild(tr);
+    });
   }
 
   function renderAnalytics(){
