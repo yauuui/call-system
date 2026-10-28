@@ -303,7 +303,9 @@
     .funnel-stage { display: flex; align-items: center; gap: 10px; }
     .funnel-label { width: 110px; flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--text-main); text-align: right; }
     .funnel-bar-track { flex: 1; background: #f1f5f9; border-radius: 4px; overflow: hidden; height: 32px; }
-    .funnel-bar-fill { height: 100%; min-width: 2%; background: linear-gradient(90deg, var(--accent), #0d9488); display: flex; align-items: center; padding-left: 10px; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; transition: width 0.4s ease; }
+    .funnel-bar-fill { height: 100%; min-width: 2%; background: linear-gradient(90deg, var(--accent), #0d9488); transition: width 0.4s ease; }
+    .funnel-count { width: 170px; flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--text-main); white-space: nowrap; }
+    .funnel-count .pct { color: var(--accent); }
     .funnel-rate-connector { padding: 3px 0 3px 120px; font-size: 11px; color: var(--text-muted); }
     .funnel-rate-connector .rate-val { font-weight: 700; }
     .funnel-rate-connector .rate-good { color: var(--success); }
@@ -2313,7 +2315,8 @@
           html += `
             <div class="funnel-stage">
               <div class="funnel-label">${stage.name}</div>
-              <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${pct}%;">${stage.count}件（総架電比 ${rawPct.toFixed(1)}%）</div></div>
+              <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${pct}%;"></div></div>
+              <div class="funnel-count">${stage.count}件（総架電比 <span class="pct">${rawPct.toFixed(1)}%</span>）</div>
             </div>`;
           if (idx < stages.length - 1) {
               const next = stages[idx + 1];
