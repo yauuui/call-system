@@ -1975,7 +1975,7 @@
       // コール転換ファネル（受付→担当→目的→メリット(機能)→メリット(ベネ)→断りづらい→クロージング→カウンター→アポ）
       const funnelStages = [
           { name: '総架電', count: totalCalls },
-          { name: '担当到達', count: totalCalls - totalUk - totalFu },
+          { name: '担当到達', count: totalCalls - totalUk - totalFu - totalFz },
           { name: '目的', count: totalTbk + totalApo },
           { name: 'メリット(機能)', count: totalTbk + totalApo - totalMokuteki },
           { name: 'メリット(ベネ)', count: totalTbk + totalApo - totalMokuteki - totalMeritKinou },
