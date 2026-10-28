@@ -827,6 +827,15 @@
         </div>
 
         <div class="card">
+          <div class="card-header">総架電数に対する到達率（担当BK／目的／メリット(機能)／メリット(ベネ)／断りづらい／クロージング／カウンターまで、それぞれ何割到達したか）</div>
+          <div class="card-body">
+            <div class="chart-container" style="height: 260px;">
+              <canvas id="sa-reachrate-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-header">ステージ別 詳細分析（到達数・通過数・通過率）</div>
           <div class="table-container">
             <table>
@@ -893,6 +902,7 @@
                   </div>
                   <div class="chart-container" style="height:180px; margin-bottom:15px;"><canvas id="sa-a-breakdown-chart"></canvas></div>
                   <div id="sa-a-funnel-container" class="funnel-wrap" style="margin-bottom:15px;"></div>
+                  <div class="chart-container" style="height:200px; margin-bottom:15px;"><canvas id="sa-a-reachrate-chart"></canvas></div>
                   <div class="table-container">
                     <table>
                       <thead><tr><th>ステージ</th><th>到達</th><th>離脱</th><th>通過</th><th>通過率</th></tr></thead>
@@ -922,6 +932,7 @@
                   </div>
                   <div class="chart-container" style="height:180px; margin-bottom:15px;"><canvas id="sa-b-breakdown-chart"></canvas></div>
                   <div id="sa-b-funnel-container" class="funnel-wrap" style="margin-bottom:15px;"></div>
+                  <div class="chart-container" style="height:200px; margin-bottom:15px;"><canvas id="sa-b-reachrate-chart"></canvas></div>
                   <div class="table-container">
                     <table>
                       <thead><tr><th>ステージ</th><th>到達</th><th>離脱</th><th>通過</th><th>通過率</th></tr></thead>
@@ -2104,6 +2115,7 @@
   // KPI・ドーナツ内訳チャート・ファネル・ステージ別詳細テーブルを、指定したIDプレフィックスの要素に描画する
   // （通常表示のsa-*と、比較モードのsa-a-*/sa-b-*のどちらからも呼び出せる共通処理）
   let breakdownChartInstances = {};
+  let reachRateChartInstances = {};
   function renderStatusPanel(prefix, data) {
       const totalCallsEl = document.getElementById(`${prefix}-total-calls`);
       if (totalCallsEl) totalCallsEl.textContent = data.totalCalls;
@@ -2139,6 +2151,37 @@
                   }]
               },
               options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+          });
+      }
+
+      // 総架電数に対する到達率（担当BK／目的／メリット(機能)／メリット(ベネ)／断りづらい／クロージング／カウンターまで、それぞれ何割到達したか）
+      const reachCanvasEl = document.getElementById(`${prefix}-reachrate-chart`);
+      if (reachCanvasEl) {
+          if (reachRateChartInstances[prefix]) reachRateChartInstances[prefix].destroy();
+          const fs = data.funnelStages; // [総架電, 担当到達, 目的, メリット(機能), メリット(ベネ), 断りづらい, クロージング, カウンター, ★アポ]
+          const reachLabels = ['担当BK', '目的', 'メリット(機能)', 'メリット(ベネ)', '断りづらい', 'クロージング', 'カウンター'];
+          const reachCounts = [fs[1].count, fs[2].count, fs[3].count, fs[4].count, fs[5].count, fs[6].count, fs[7].count];
+          const reachRates = reachCounts.map(c => data.totalCalls > 0 ? +((c / data.totalCalls) * 100).toFixed(1) : 0);
+          reachRateChartInstances[prefix] = new Chart(reachCanvasEl.getContext('2d'), {
+              type: 'bar',
+              data: {
+                  labels: reachLabels,
+                  datasets: [{
+                      label: '総架電数に対する到達率',
+                      data: reachRates,
+                      backgroundColor: ['#0d9488', '#60a5fa', '#34d399', '#a78bfa', '#fb923c', '#f87171', '#facc15'],
+                      borderRadius: 4
+                  }]
+              },
+              options: {
+                  indexAxis: 'y',
+                  maintainAspectRatio: false,
+                  scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+                  plugins: {
+                      legend: { display: false },
+                      tooltip: { callbacks: { label: ctx => `${ctx.raw}%（${reachCounts[ctx.dataIndex]}件 / 総架電${data.totalCalls}件）` } }
+                  }
+              }
           });
       }
   }
