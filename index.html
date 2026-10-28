@@ -424,6 +424,9 @@
         <button class="btn-settings-top" onclick="toggleMiniMode()" title="小さな別ウィンドウで表示（他のタブに切り替えても表示されます）">
           <svg class="icon" style="margin:0;"><use href="#icon-minimize"></use></svg>
         </button>
+        <button class="btn-settings-top" onclick="openListTalkModal()" title="マイリスト・トーク管理（自分のアカウントにのみ表示されます）">
+          <svg class="icon"><use href="#icon-clipboard"></use></svg> リスト/トーク
+        </button>
         <button class="btn-settings-top" onclick="logout()" title="ログアウト">
           <svg class="icon" style="margin:0;"><use href="#icon-logout"></use></svg>
         </button>
@@ -1010,15 +1013,34 @@
         <div class="add-group"><input type="text" id="new-product-input" placeholder="商材名"><button onclick="addProduct()">追加</button></div>
         <ul class="settings-list" id="settings-products-list"></ul>
       </div>
-      <div style="margin-top:25px;">
-        <h3 style="font-size:13px; color:#666; margin-bottom:10px;"><svg class="icon" style="vertical-align:bottom; margin-right:4px;"><use href="#icon-clipboard"></use></svg>リスト管理（製造業新規リスト、担当BKリスト等）</h3>
-        <div class="add-group"><input type="text" id="new-list-input" placeholder="リスト名"><button onclick="addCallList()">追加</button></div>
-        <ul class="settings-list" id="settings-lists-list"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ================= モーダル (マイリスト・トーク管理：アカウントごと) ================= -->
+<div id="list-talk-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:650px;">
+    <div class="modal-header">
+      <h2><svg class="icon"><use href="#icon-clipboard"></use></svg> マイリスト・トーク管理</h2>
+      <button class="btn-close" onclick="closeListTalkModal()"><svg class="icon" style="width:24px; height:24px;"><use href="#icon-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:20px; background:#f1f5f9; padding:10px 12px; border-radius:4px;">
+        ここで追加するリスト・トークは <strong id="ltm-current-user">-</strong> さんのアカウントにのみ表示されます（他のメンバーには表示されません）。
       </div>
-      <div style="margin-top:25px;">
-        <h3 style="font-size:13px; color:#666; margin-bottom:10px;"><svg class="icon" style="vertical-align:bottom; margin-right:4px;"><use href="#icon-message"></use></svg>トーク管理（トークスクリプトのバージョン）</h3>
-        <div class="add-group"><input type="text" id="new-talk-input" placeholder="トーク名（例：トークv2）"><button onclick="addTalk()">追加</button></div>
-        <ul class="settings-list" id="settings-talks-list"></ul>
+      <div style="margin-bottom:25px;">
+        <h3 style="font-size:13px; color:#666; margin-bottom:10px;"><svg class="icon" style="vertical-align:bottom; margin-right:4px;"><use href="#icon-clipboard"></use></svg>マイリスト（製造業新規リスト、担当BKリスト等）</h3>
+        <div class="add-group"><input type="text" id="new-list-input" placeholder="リスト名"><button onclick="addCallList()">追加</button></div>
+        <ul class="settings-list" id="my-lists-list"></ul>
+      </div>
+      <div>
+        <h3 style="font-size:13px; color:#666; margin-bottom:10px;"><svg class="icon" style="vertical-align:bottom; margin-right:4px;"><use href="#icon-message"></use></svg>マイトーク（内容と変更履歴を保存できます）</h3>
+        <div class="add-group" style="flex-direction:column; align-items:stretch; gap:8px; margin-bottom:15px;">
+          <input type="text" id="new-talk-name-input" placeholder="トーク名（例：トークv2）">
+          <textarea id="new-talk-content-input" class="edit-textarea" style="height:70px; margin-top:0;" placeholder="トークの内容（台本）を入力..."></textarea>
+          <button onclick="addTalk()" style="align-self:flex-end; background:var(--sidebar-bg); color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:13px; font-weight:600;">トークを追加</button>
+        </div>
+        <div id="my-talks-list" style="display:flex; flex-direction:column; gap:12px;"></div>
       </div>
     </div>
   </div>
@@ -1087,6 +1109,7 @@
   let prevApoCounts = {};
   let prevRankingState = { apo: [], cph: [] };
   let personalScriptUnsubscribe = null;
+  let personalListsTalksUnsubscribe = null;
   
   let breakdownChartInstance = null;
   let hourlyChartInstance = null;
@@ -1140,7 +1163,15 @@
     if (!state.sessionsByKey) state.sessionsByKey = {};
     const key = getSessionKey(list, talk);
     if (!state.sessionsByKey[key]) {
-      state.sessionsByKey[key] = { list: list || UNSET_LABEL, talk: talk || UNSET_LABEL, counts: Array(10).fill(0), timerSeconds: 0 };
+      const talkObj = talksList.find(t => t.name === talk);
+      state.sessionsByKey[key] = {
+        list: list || UNSET_LABEL,
+        talk: talk || UNSET_LABEL,
+        counts: Array(10).fill(0),
+        timerSeconds: 0,
+        // この組み合わせで最初に架電した時点のトーク内容を記録しておく（後でトークを編集しても、当時使っていた内容を確認できるように）
+        talkContentSnapshot: talkObj ? talkObj.content : ""
+      };
     }
     return state.sessionsByKey[key];
   }
@@ -1154,8 +1185,6 @@
     usersList = JSON.parse(localStorage.getItem("kaden_users_list")) || [...defaultUsers];
     productsList = JSON.parse(localStorage.getItem("kaden_products_list")) || [...defaultProducts];
     productSettings = JSON.parse(localStorage.getItem("kaden_product_settings")) || { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
-    listsList = JSON.parse(localStorage.getItem("kaden_lists_list")) || [];
-    talksList = JSON.parse(localStorage.getItem("kaden_talks_list")) || [];
     const savedData = localStorage.getItem("kaden_app_data_v4");
     if (savedData) appData = JSON.parse(savedData);
     scriptData.team = JSON.parse(localStorage.getItem("kaden_team_scripts")) || {};
@@ -1193,13 +1222,10 @@
           productsList = data.products || [...defaultProducts];
           productSettings = data.productSettings || { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
           scriptData.team = data.scripts || {};
-          listsList = data.lists || [];
-          talksList = data.talks || [];
         } else {
           usersList = [...defaultUsers]; productsList = [...defaultProducts];
           productSettings = { "eightteam": { step: 0.5 }, "eigthteam": { step: 0.5 } };
-          listsList = []; talksList = [];
-          db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, scripts: {}, lists: listsList, talks: talksList });
+          db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, scripts: {} });
         }
         updateSelectUIs();
         if(document.getElementById("page-script").style.display === "flex") renderScriptContent();
@@ -1287,6 +1313,24 @@
         scriptData.personal = JSON.parse(localStorage.getItem("kaden_personal_scripts_" + currentUser)) || {};
     }
 
+    if(personalListsTalksUnsubscribe) personalListsTalksUnsubscribe();
+    if(db) {
+        personalListsTalksUnsubscribe = db.collection('kaden_personal_lists_talks').doc(currentUser).onSnapshot(doc => {
+            if(doc.exists) {
+                const d = doc.data();
+                listsList = d.lists || [];
+                talksList = d.talks || [];
+            } else {
+                listsList = []; talksList = [];
+            }
+            updateSelectUIs();
+            if(document.getElementById("list-talk-modal").style.display === "flex") renderListTalkModal();
+        });
+    } else {
+        listsList = JSON.parse(localStorage.getItem("kaden_personal_lists_" + currentUser)) || [];
+        talksList = JSON.parse(localStorage.getItem("kaden_personal_talks_" + currentUser)) || [];
+    }
+
     const editToggle = document.getElementById("admin-edit-toggle");
     const settingsBtn = document.getElementById("btn-open-settings");
     if (currentUser === "新田健介" || currentUser === "新田 健介") {
@@ -1305,6 +1349,8 @@
     if (isRunning) stopTimer();
     currentUser = "";
     if(personalScriptUnsubscribe) { personalScriptUnsubscribe(); personalScriptUnsubscribe = null; }
+    if(personalListsTalksUnsubscribe) { personalListsTalksUnsubscribe(); personalListsTalksUnsubscribe = null; }
+    listsList = []; talksList = []; currentList = ""; currentTalk = "";
     if (isMiniMode) closeMiniWindow();
     document.getElementById("main-app").style.display = "none";
     setupLogin();
@@ -1352,8 +1398,8 @@
     const tSel = document.getElementById("talk-select");
     tSel.innerHTML = "";
     tSel.add(new Option(UNSET_LABEL, ""));
-    talksList.forEach(t => tSel.add(new Option(t, t)));
-    tSel.value = talksList.includes(currentTalk) ? currentTalk : "";
+    talksList.forEach(t => tSel.add(new Option(t.name, t.name)));
+    tSel.value = talksList.some(t => t.name === currentTalk) ? currentTalk : "";
 
     const huSel = document.getElementById("hourly-user-select");
     const curHu = huSel.value || currentUser;
@@ -1396,7 +1442,7 @@
     listsList.forEach(l => laLSel.add(new Option(l, l)));
     laLSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
     const laTSel = document.getElementById("la-talk-select"); laTSel.innerHTML = '<option value="__ALL__">【全トーク】</option>';
-    talksList.forEach(t => laTSel.add(new Option(t, t)));
+    talksList.forEach(t => laTSel.add(new Option(t.name, t.name)));
     laTSel.add(new Option(UNSET_LABEL, UNSET_LABEL));
 
     const loginSel = document.getElementById("login-user-select");
@@ -2454,35 +2500,15 @@
             </div>
         </li>`;
     });
-    const lList = document.getElementById("settings-lists-list"); lList.innerHTML = "";
-    listsList.forEach(l => lList.innerHTML += `<li>${escapeHTML(l)} <button class="btn-del" onclick="deleteCallList('${l.replace(/'/g, "\\'")}')">削除</button></li>`);
-    const tList = document.getElementById("settings-talks-list"); tList.innerHTML = "";
-    talksList.forEach(t => tList.innerHTML += `<li>${escapeHTML(t)} <button class="btn-del" onclick="deleteTalk('${t.replace(/'/g, "\\'")}')">削除</button></li>`);
   }
 
   function saveSettingsConfig() {
-    if(db) db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings, lists: listsList, talks: talksList }, {merge: true});
+    if(db) db.collection('kaden_settings').doc('general').set({ users: usersList, products: productsList, productSettings: productSettings }, {merge: true});
     else {
         localStorage.setItem("kaden_users_list", JSON.stringify(usersList));
         localStorage.setItem("kaden_products_list", JSON.stringify(productsList));
         localStorage.setItem("kaden_product_settings", JSON.stringify(productSettings));
-        localStorage.setItem("kaden_lists_list", JSON.stringify(listsList));
-        localStorage.setItem("kaden_talks_list", JSON.stringify(talksList));
     }
-  }
-  function addCallList() {
-    const val = document.getElementById("new-list-input").value.trim();
-    if(val && !listsList.includes(val)){ listsList.push(val); saveSettingsConfig(); updateSelectUIs(); renderSettingsLists(); document.getElementById("new-list-input").value="";}
-  }
-  function deleteCallList(l) {
-    if(confirm(`「${l}」を削除しますか？\n（過去に記録済みの数値は保持されます）`)){ listsList = listsList.filter(x=>x!==l); saveSettingsConfig(); if(currentList===l) currentList=""; updateSelectUIs(); renderSettingsLists(); }
-  }
-  function addTalk() {
-    const val = document.getElementById("new-talk-input").value.trim();
-    if(val && !talksList.includes(val)){ talksList.push(val); saveSettingsConfig(); updateSelectUIs(); renderSettingsLists(); document.getElementById("new-talk-input").value="";}
-  }
-  function deleteTalk(t) {
-    if(confirm(`「${t}」を削除しますか？\n（過去に記録済みの数値は保持されます）`)){ talksList = talksList.filter(x=>x!==t); saveSettingsConfig(); if(currentTalk===t) currentTalk=""; updateSelectUIs(); renderSettingsLists(); }
   }
   function addUser() {
     const val = document.getElementById("new-user-input").value.trim();
@@ -2499,10 +2525,163 @@
     if(confirm(`「${p}」を削除しますか？`)){ productsList = productsList.filter(x=>x!==p); saveSettingsConfig(); if(currentProduct===p) currentProduct=ALL_PRODUCTS_KEY; updateSelectUIs(); renderSettingsLists(); handleSelectionChange();}
   }
 
+  // --- マイリスト・マイトーク管理（アカウントごと。他のアカウントには表示されない） ---
+  function openListTalkModal() { renderListTalkModal(); document.getElementById('list-talk-modal').style.display = 'flex'; }
+  function closeListTalkModal() { document.getElementById('list-talk-modal').style.display = 'none'; }
+
+  function saveListsTalksConfig() {
+    if (db) db.collection('kaden_personal_lists_talks').doc(currentUser).set({ lists: listsList, talks: talksList }, { merge: true });
+    else {
+        localStorage.setItem("kaden_personal_lists_" + currentUser, JSON.stringify(listsList));
+        localStorage.setItem("kaden_personal_talks_" + currentUser, JSON.stringify(talksList));
+    }
+  }
+
+  function addCallList() {
+    const val = document.getElementById("new-list-input").value.trim();
+    if (val && !listsList.includes(val)) {
+        listsList.push(val);
+        saveListsTalksConfig(); updateSelectUIs(); renderListTalkModal();
+        document.getElementById("new-list-input").value = "";
+    }
+  }
+  function deleteCallList(l) {
+    if (confirm(`「${l}」を削除しますか？\n（過去に記録済みの数値は保持されます）`)) {
+        listsList = listsList.filter(x => x !== l);
+        if (currentList === l) currentList = "";
+        saveListsTalksConfig(); updateSelectUIs(); renderListTalkModal();
+    }
+  }
+
+  function addTalk() {
+    const name = document.getElementById("new-talk-name-input").value.trim();
+    const content = document.getElementById("new-talk-content-input").value;
+    if (!name) return;
+    if (talksList.some(t => t.name === name)) { alert("同じ名前のトークが既にあります。"); return; }
+    talksList.push({ id: `${Date.now()}_${Math.random().toString(36).slice(2)}`, name, content, updatedAt: Date.now(), history: [] });
+    saveListsTalksConfig(); updateSelectUIs(); renderListTalkModal();
+    document.getElementById("new-talk-name-input").value = "";
+    document.getElementById("new-talk-content-input").value = "";
+  }
+  function deleteTalk(id) {
+    const t = talksList.find(x => x.id === id);
+    if (!t) return;
+    if (confirm(`「${t.name}」を削除しますか？\n（過去に記録済みの数値は保持されます）`)) {
+        if (currentTalk === t.name) currentTalk = "";
+        talksList = talksList.filter(x => x.id !== id);
+        saveListsTalksConfig(); updateSelectUIs(); renderListTalkModal();
+    }
+  }
+  function updateTalkContent(id, newContent) {
+    const t = talksList.find(x => x.id === id);
+    if (!t || t.content === newContent) return;
+    if (!t.history) t.history = [];
+    t.history.unshift({ content: t.content, updatedAt: t.updatedAt });
+    t.content = newContent;
+    t.updatedAt = Date.now();
+    saveListsTalksConfig(); renderListTalkModal();
+    showToast(`「${t.name}」の内容を更新しました`, "#icon-save");
+  }
+
+  // 2つのテキストの行単位の差分を計算する（LCSベース）。追加行/削除行を色分け表示するために使う。
+  function computeLineDiff(oldText, newText) {
+    const oldLines = (oldText || '').split('\n');
+    const newLines = (newText || '').split('\n');
+    const n = oldLines.length, m = newLines.length;
+    const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+            dp[i][j] = oldLines[i] === newLines[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+    }
+    let i = 0, j = 0; const out = [];
+    while (i < n && j < m) {
+        if (oldLines[i] === newLines[j]) { out.push({ type: 'same', text: oldLines[i] }); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ type: 'removed', text: oldLines[i] }); i++; }
+        else { out.push({ type: 'added', text: newLines[j] }); j++; }
+    }
+    while (i < n) { out.push({ type: 'removed', text: oldLines[i] }); i++; }
+    while (j < m) { out.push({ type: 'added', text: newLines[j] }); j++; }
+    return out.map(l => {
+        const esc = escapeHTML(l.text) || '&nbsp;';
+        if (l.type === 'added') return `<div style="background:#dcfce7; color:#166534;">+ ${esc}</div>`;
+        if (l.type === 'removed') return `<div style="background:#fee2e2; color:#991b1b; text-decoration:line-through;">− ${esc}</div>`;
+        return `<div style="color:#94a3b8;">&nbsp;&nbsp;${esc}</div>`;
+    }).join('');
+  }
+
+  function renderTalkHistory(t) {
+    if (!t.history || t.history.length === 0) return '<div style="font-size:12px; color:var(--text-muted);">変更履歴はまだありません。</div>';
+    const pastVersions = [...t.history].reverse(); // 古い順
+    const chain = pastVersions.map(h => h.content).concat([t.content]);
+    const timestamps = pastVersions.map(h => h.updatedAt).concat([t.updatedAt]);
+    let html = '';
+    for (let i = 1; i < chain.length; i++) {
+        html += `<div style="margin-bottom:12px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">${new Date(timestamps[i-1]).toLocaleString('ja-JP')} → ${new Date(timestamps[i]).toLocaleString('ja-JP')}</div>
+          <div style="font-size:12px; line-height:1.6; background:#f8fafc; border:1px solid var(--border); border-radius:4px; padding:8px; white-space:pre-wrap; font-family:monospace;">${computeLineDiff(chain[i-1], chain[i])}</div>
+        </div>`;
+    }
+    return html;
+  }
+
+  function renderListTalkModal() {
+    const userLabel = document.getElementById('ltm-current-user');
+    if (userLabel) userLabel.textContent = currentUser;
+
+    const lList = document.getElementById("my-lists-list"); lList.innerHTML = "";
+    if (listsList.length === 0) lList.innerHTML = '<li style="color:var(--text-muted); font-size:12px;">まだリストが登録されていません。</li>';
+    listsList.forEach(l => {
+        const li = document.createElement('li');
+        const span = document.createElement('span'); span.textContent = l;
+        const btn = document.createElement('button'); btn.className = 'btn-del'; btn.textContent = '削除';
+        btn.addEventListener('click', () => deleteCallList(l));
+        li.append(span, btn);
+        lList.appendChild(li);
+    });
+
+    const tContainer = document.getElementById("my-talks-list"); tContainer.innerHTML = "";
+    if (talksList.length === 0) {
+        tContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-muted); font-size:13px;">まだトークが登録されていません。</div>';
+    }
+    talksList.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'k-card';
+        div.innerHTML = `
+          <div class="k-card-header">
+            <span>${escapeHTML(t.name)} <span style="font-weight:400; color:#94a3b8; font-size:11px;">最終更新: ${t.updatedAt ? new Date(t.updatedAt).toLocaleString('ja-JP') : '-'}</span></span>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-del history-btn" style="background:#e0f2fe; color:#0369a1;">履歴(${(t.history||[]).length})</button>
+              <button class="btn-del delete-btn">削除</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:10px 15px;">
+            <textarea class="edit-textarea content-area-ta" style="height:100px; margin-top:0;">${escapeHTML(t.content || '')}</textarea>
+            <div style="text-align:right; margin-top:6px;">
+              <button class="btn btn-primary save-content-btn" style="padding:6px 12px; font-size:12px;">内容を保存</button>
+            </div>
+            <div class="history-area" style="display:none; margin-top:10px; border-top:1px solid var(--border); padding-top:10px;"></div>
+          </div>
+        `;
+        const historyBtn = div.querySelector('.history-btn');
+        const deleteBtn = div.querySelector('.delete-btn');
+        const textarea = div.querySelector('.content-area-ta');
+        const saveBtn = div.querySelector('.save-content-btn');
+        const historyDiv = div.querySelector('.history-area');
+        historyBtn.addEventListener('click', () => {
+            if (historyDiv.style.display === 'none') { historyDiv.innerHTML = renderTalkHistory(t); historyDiv.style.display = 'block'; }
+            else historyDiv.style.display = 'none';
+        });
+        deleteBtn.addEventListener('click', () => deleteTalk(t.id));
+        saveBtn.addEventListener('click', () => updateTalkContent(t.id, textarea.value));
+        tContainer.appendChild(div);
+    });
+  }
+
   // --- データハンドリング ---
   function ensureDataExists(u, d, p) {
     if (p === ALL_PRODUCTS_KEY || !u || !d || !p) return;
-    if (!appData[u]) appData[u] = {}; 
+    if (!appData[u]) appData[u] = {};
     if (!appData[u][d]) appData[u][d] = {};
     if (!appData[u][d][p]) {
       let newState = getEmptyState();
