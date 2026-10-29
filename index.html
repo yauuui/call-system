@@ -531,6 +531,20 @@
     .wd-diff.strong { color: #047857; }
     .wd-link { border: 1px solid #99f6e4; background: #f0fdfa; color: var(--accent-hover); border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .wd-note { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    /* トークのA/B判定 */
+    .ab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .ab-side { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+    .ab-side.a { border-left: 4px solid #3b82f6; }
+    .ab-side.b { border-left: 4px solid #a855f7; }
+    .ab-side .ab-name { font-size: 13px; font-weight: 700; }
+    .ab-side .ab-rate { font-size: 22px; font-weight: 700; margin-top: 2px; }
+    .ab-side .ab-n { font-size: 11px; color: var(--text-muted); }
+    .ab-prob { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; }
+    .ab-meter { flex: 1; height: 12px; border-radius: 6px; background: linear-gradient(90deg, #3b82f6 0%, #3b82f6 var(--pa), #a855f7 var(--pa), #a855f7 100%); position: relative; }
+    .ab-meter::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: #1e293b; }
+    .ab-verdict { margin-top: 10px; padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; background: #f8fafc; border: 1px solid var(--border); }
+    .ab-verdict.decided { background: #f0fdf4; border-color: #86efac; color: #065f46; }
+    .ab-note { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -1294,6 +1308,24 @@
               <tbody id="la-table-body"></tbody>
             </table>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span style="display:flex; align-items:center; gap:6px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-message"></use></svg> トークのA/B判定（差が誤差かどうか）</span>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <div class="filter-group"><label for="ab-talk-a">A</label><select id="ab-talk-a" onchange="renderTalkAB()"></select></div>
+              <div class="filter-group"><label for="ab-talk-b">B</label><select id="ab-talk-b" onchange="renderTalkAB()"></select></div>
+              <div class="filter-group"><label for="ab-metric">指標</label>
+                <select id="ab-metric" onchange="renderTalkAB()">
+                  <option value="apo">アポ率（アポ/総架電）</option>
+                  <option value="brk">受付突破率（担当コネクト/総架電）</option>
+                  <option value="tanto">担当受注率（アポ/担当コネクト）</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="card-body" id="talk-ab"></div>
         </div>
       </div>
 
@@ -4840,6 +4872,7 @@
     renderListAnalysisHead();
     const tb = document.getElementById("la-table-body"); tb.innerHTML = "";
     renderListAnalysisChart(rows);
+    renderTalkAB();
     if (!rows.length) {
       tb.innerHTML = `<tr><td colspan="${LA_COLUMNS.length}" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>`;
       return;
@@ -4858,6 +4891,103 @@
       tr.innerHTML = `<td style="font-weight:600; color:var(--accent); text-align:left;">${escapeHTML(r.group)}${badge}</td><td>${r.hours.toFixed(1)}</td><td style="font-weight:700;">${r.tot}</td><td>${r.uk}</td><td>${r.fu}</td><td>${r.fuz}</td><td>${r.tbk}</td><td>${r.mokuteki}</td><td>${r.meritKinou}</td><td>${r.meritBene}</td><td>${r.kotowarizurai}</td><td>${r.closing}</td><td>${r.counter}</td><td style="color:var(--danger); font-weight:700;">${r.apo}</td><td class="la-rate">${r.brk.toFixed(1)}%</td><td class="la-rate">${r.apoRate.toFixed(1)}%</td><td class="la-rate">${r.tantoRate.toFixed(1)}%</td><td style="background:#f4f6f9; font-weight:700;">${r.cph.toFixed(1)}</td>`;
       tb.appendChild(tr);
     });
+  }
+
+  // --- トークのA/B判定 ---
+  // リスト/トーク分析と同じ絞り込み（アカウント・商材・リスト・期間）でトークごとに集計し、
+  // 一様事前分布のベータ分布で「Bの方が良い確率」を正規近似で求める
+  function erf(x) {
+    // Abramowitz-Stegun 7.1.26
+    const s = Math.sign(x); x = Math.abs(x);
+    const t = 1 / (1 + 0.3275911 * x);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return s * y;
+  }
+  const normCdf = z => 0.5 * (1 + erf(z / Math.SQRT2));
+
+  function aggregateByTalk() {
+    const uFilter = document.getElementById("la-user-select").value;
+    const pFilter = document.getElementById("la-product-select").value;
+    const lFilter = document.getElementById("la-list-select").value;
+    const sD = document.getElementById("la-start-date").value;
+    const eD = document.getElementById("la-end-date").value;
+    const talks = {};
+    for (const user in appData) {
+      if (uFilter !== "__ALL_USERS__" && user !== uFilter) continue;
+      for (const date in appData[user]) {
+        if ((sD && date < sD) || (eD && date > eD)) continue;
+        for (const p in appData[user][date]) {
+          if (pFilter !== "__ALL_PRODUCTS__" && p !== pFilter) continue;
+          const sessions = appData[user][date][p].sessionsByKey || {};
+          for (const key in sessions) {
+            const sess = sessions[key];
+            if (lFilter !== "__ALL__" && sess.list !== lFilter) continue;
+            const t = talks[sess.talk] = talks[sess.talk] || { calls: 0, connect: 0, apo: 0 };
+            const c = sess.counts || [];
+            for (let i = 0; i < 10; i++) t.calls += c[i] || 0;
+            for (let i = 3; i < 10; i++) t.connect += c[i] || 0;
+            t.apo += c[9] || 0;
+          }
+        }
+      }
+    }
+    return talks;
+  }
+
+  let abLast = { a: '', b: '' };
+  function renderTalkAB() {
+    const box = document.getElementById('talk-ab');
+    if (!box) return;
+    const talks = aggregateByTalk();
+    const names = Object.keys(talks).sort((a, b) => talks[b].calls - talks[a].calls);
+    const selA = document.getElementById('ab-talk-a'), selB = document.getElementById('ab-talk-b');
+    let wantA = selA.value, wantB = selB.value;
+    // AとBに同じトークが選ばれたら、選び直した側を優先し、もう一方に直前の選択を入れる（入れ替え）
+    if (wantA && wantA === wantB) {
+      if (wantA !== abLast.a) wantB = abLast.a; else wantA = abLast.b;
+    }
+    [selA, selB].forEach(sel => { sel.innerHTML = ''; names.forEach(n => sel.add(new Option(n, n))); });
+    selA.value = names.includes(wantA) ? wantA : (names[0] || '');
+    selB.value = names.includes(wantB) && wantB !== selA.value ? wantB : (names.find(n => n !== selA.value) || '');
+    abLast = { a: selA.value, b: selB.value };
+    if (names.length < 2) {
+      box.innerHTML = '<div class="ab-note" style="margin:0;">比べるには、この条件で2種類以上のトークの記録が必要です（架電パネルでトークを選んで架電すると記録されます）。</div>';
+      return;
+    }
+    const metric = document.getElementById('ab-metric').value;
+    const pick = t => metric === 'apo' ? { s: t.apo, n: t.calls, unit: '架電' } : metric === 'brk' ? { s: t.connect, n: t.calls, unit: '架電' } : { s: t.apo, n: t.connect, unit: '担当コネクト' };
+    const A = pick(talks[selA.value]), B = pick(talks[selB.value]);
+    const post = x => { const a = x.s + 1, b = x.n - x.s + 1; return { mean: a / (a + b), v: a * b / ((a + b) ** 2 * (a + b + 1)) }; };
+    const pa = post(A), pb = post(B);
+    const probB = normCdf((pb.mean - pa.mean) / Math.sqrt(pa.v + pb.v));
+    const rate = x => x.n > 0 ? x.s / x.n : 0;
+    const rA = rate(A), rB = rate(B), diff = rB - rA;
+
+    // 確率は四捨五入で 100%／0% と断定的に見えないよう、端は「99%超」「1%未満」と表示する
+    const pct = v => v >= 0.995 ? '99%超' : v <= 0.005 ? '1%未満' : `${(v * 100).toFixed(0)}%`;
+    let verdict, decided = false;
+    const better = probB >= 0.5 ? selB.value : selA.value, pBetter = Math.max(probB, 1 - probB);
+    if (pBetter >= 0.95) {
+      decided = true;
+      verdict = `判定：<strong>${escapeHTML(better)}</strong> の方が良いと言えます（確からしさ ${pct(pBetter)}）。`;
+    } else if (A.n === 0 || B.n === 0) {
+      verdict = 'どちらかのトークの件数が0のため、判定できません。';
+    } else if (Math.abs(diff) < 1e-9) {
+      verdict = '今のところ差はありません。差がない状態が続く場合、どちらが良いかは判定できません。';
+    } else {
+      // 今の率が続くと仮定して、片側95%で差を確認できる各トークの件数を見積もる
+      const need = Math.ceil(1.645 ** 2 * (rA * (1 - rA) + rB * (1 - rB)) / diff ** 2);
+      const remA = Math.max(0, need - A.n), remB = Math.max(0, need - B.n);
+      verdict = need > 100000
+        ? `まだ誤差の範囲です。差がとても小さいため、判定には非常に多くの${A.unit}が必要です。`
+        : `まだ誤差の範囲です（${escapeHTML(better)} の方が良い確率 ${pct(pBetter)}）。今の率が続けば、<strong>あと約${remA + remB}${A.unit}</strong>（${escapeHTML(selA.value)} あと${remA}件・${escapeHTML(selB.value)} あと${remB}件）で判定できる見込みです。`;
+    }
+    const side = (cls, name, x) => `<div class="ab-side ${cls}"><div class="ab-name">${cls.toUpperCase()}：${escapeHTML(name)}</div><div class="ab-rate">${(rate(x) * 100).toFixed(1)}%</div><div class="ab-n">${x.s} / ${x.n}${x.unit}</div></div>`;
+    box.innerHTML = `<div class="ab-grid">${side('a', selA.value, A)}${side('b', selB.value, B)}</div>
+      <div class="ab-prob"><span style="color:#2563eb; white-space:nowrap;">A ${pct(1 - probB)}</span><div class="ab-meter" style="--pa:${((1 - probB) * 100).toFixed(1)}%;"></div><span style="color:#9333ea; white-space:nowrap;">B ${pct(probB)}</span></div>
+      <div class="ab-note" style="margin-top:4px;">「どちらの方が良いか」の確からしさ（真ん中の線が50%）</div>
+      <div class="ab-verdict ${decided ? 'decided' : ''}">${verdict}</div>
+      <div class="ab-note">※ベータ分布（一様事前分布）による推定です。リスト・時間帯・担当者などの条件がそろっているほど、比較の信頼性が高くなります。</div>`;
   }
 
   // 列定義（key は renderListAnalysis の行オブジェクトのプロパティ名）。見出しクリックでその列で並べ替える
