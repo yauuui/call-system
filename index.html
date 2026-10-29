@@ -1996,6 +1996,8 @@
   }
   function updateKnowledgeItem(key, val) { getTargetScriptData().knowledge[key] = val; }
   function escapeHTML(str) { if(!str) return ""; return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])); }
+  // onclick="fn(...)" 等のインラインハンドラに文字列を引数として埋め込む（名前に ' や " が含まれても壊れないようにする）
+  function jsArgAttr(v) { return escapeHTML(JSON.stringify(String(v))); }
 
   // --- ステータス分析機能 ---
   // countsの配列1件分を合計値・日別集計に加算する（リスト/トーク絞り込みの有無にかかわらず共通で使う）
@@ -2603,8 +2605,8 @@
         }
         
         bodyHtml += `<tr>
-            <td class="sticky-col" style="font-weight:600;">${u}</td>
-            <td><input type="number" step="0.5" class="kpi-input" value="${uData.target || 0}" onchange="updateKpiUserTarget('${u}', this.value)"></td>
+            <td class="sticky-col" style="font-weight:600;">${escapeHTML(u)}</td>
+            <td><input type="number" step="0.5" class="kpi-input" value="${uData.target || 0}" onchange="updateKpiUserTarget(${jsArgAttr(u)}, this.value)"></td>
             <td style="background:#f1f5f9;">${uExp.toFixed(1)}</td>
             <td style="background:#f1f5f9;">${uAct.toFixed(1)}</td>
             <td style="border-right:2px solid var(--border); background:#f1f5f9;"></td>
@@ -2613,10 +2615,10 @@
             let dData = uData.daily[d] || {s:"", e:"", ex:"", ac:""};
             let bg = dData.s ? "#fff" : "#f1f5f9"; 
             bodyHtml += `
-                <td style="border-left:2px solid #cbd5e1; background:${bg};"><input type="text" class="kpi-input time" value="${dData.s||''}" onchange="updateKpiDaily('${u}', ${d}, 's', this.value)"></td>
-                <td style="background:${bg};"><input type="text" class="kpi-input time" value="${dData.e||''}" onchange="updateKpiDaily('${u}', ${d}, 'e', this.value)"></td>
-                <td style="background:${bg};"><input type="number" step="0.5" class="kpi-input" value="${dData.ex!==undefined?dData.ex:''}" onchange="updateKpiDaily('${u}', ${d}, 'ex', this.value)"></td>
-                <td style="background:${bg};"><input type="number" step="0.5" class="kpi-input" value="${dData.ac!==undefined?dData.ac:''}" onchange="updateKpiDaily('${u}', ${d}, 'ac', this.value)"></td>
+                <td style="border-left:2px solid #cbd5e1; background:${bg};"><input type="text" class="kpi-input time" value="${dData.s||''}" onchange="updateKpiDaily(${jsArgAttr(u)}, ${d}, 's', this.value)"></td>
+                <td style="background:${bg};"><input type="text" class="kpi-input time" value="${dData.e||''}" onchange="updateKpiDaily(${jsArgAttr(u)}, ${d}, 'e', this.value)"></td>
+                <td style="background:${bg};"><input type="number" step="0.5" class="kpi-input" value="${dData.ex!==undefined?dData.ex:''}" onchange="updateKpiDaily(${jsArgAttr(u)}, ${d}, 'ex', this.value)"></td>
+                <td style="background:${bg};"><input type="number" step="0.5" class="kpi-input" value="${dData.ac!==undefined?dData.ac:''}" onchange="updateKpiDaily(${jsArgAttr(u)}, ${d}, 'ac', this.value)"></td>
             `;
         }
         bodyHtml += `</tr>`;
@@ -2710,15 +2712,15 @@
 
   function renderSettingsLists() {
     const uList = document.getElementById("settings-users-list"); uList.innerHTML = "";
-    usersList.forEach(u => uList.innerHTML += `<li>${u} <button class="btn-del" onclick="deleteUser('${u}')">削除</button></li>`);
+    usersList.forEach(u => uList.innerHTML += `<li>${escapeHTML(u)} <button class="btn-del" onclick="deleteUser(${jsArgAttr(u)})">削除</button></li>`);
     const pList = document.getElementById("settings-products-list"); pList.innerHTML = "";
     productsList.forEach(p => {
         let isHalf = productSettings[p] && productSettings[p].step === 0.5;
         pList.innerHTML += `<li>
-            <span>${p}</span>
+            <span>${escapeHTML(p)}</span>
             <div style="display:flex; gap:10px; align-items:center;">
-                <label style="font-size:11px;"><input type="checkbox" onchange="toggleProductStep('${p}', this.checked)" ${isHalf ? "checked" : ""}> 0.5刻み</label>
-                <button class="btn-del" onclick="deleteProduct('${p}')">削除</button>
+                <label style="font-size:11px;"><input type="checkbox" onchange="toggleProductStep(${jsArgAttr(p)}, this.checked)" ${isHalf ? "checked" : ""}> 0.5刻み</label>
+                <button class="btn-del" onclick="deleteProduct(${jsArgAttr(p)})">削除</button>
             </div>
         </li>`;
     });
@@ -3403,7 +3405,7 @@
     const tb = document.getElementById("la-table-body"); tb.innerHTML = "";
     const groupKeys = Object.keys(groups).sort();
     if (!groupKeys.length) {
-      tb.innerHTML = '<tr><td colspan="17" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>';
+      tb.innerHTML = '<tr><td colspan="18" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>';
       return;
     }
 
@@ -3471,7 +3473,7 @@
       let s=appData[u][d][p], c=s.counts, t=s.timerSeconds||0; if(c.reduce((a,b)=>a+b,0)===0 && t===0) continue;
       let tbk=c[3]+c[4]+c[5]+c[6]+c[7]+c[8], hc=tbk+c[9], tot=c[0]+c[1]+c[2]+hc;
       let qual = s.targetQualitative ? `"${s.targetQualitative.replace(/"/g, '""')}"` : "";
-      csv+=[d,u,p,t,tot,c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7],c[8],c[9],tbk,tot>0?((hc/tot)*100).toFixed(1):"0.0",tot>0?((c[9]/tot)*100).toFixed(1):"0.0",hc>0?((c[9]/hc)*100).toFixed(1):"0.0",t>0?(t/3600).toFixed(1):"0.0",s.targetApo||3,s.targetCph||20,qual].join(",")+"\n";
+      csv+=[d,u,p,t,tot,c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7],c[8],c[9],tbk,tot>0?((hc/tot)*100).toFixed(1):"0.0",tot>0?((c[9]/tot)*100).toFixed(1):"0.0",hc>0?((c[9]/hc)*100).toFixed(1):"0.0",t>0?(tot/(t/3600)).toFixed(1):"0.0",s.targetApo||3,s.targetCph||20,qual].join(",")+"\n";
     }}}
     const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], {type:'text/csv;charset=utf-8;'})); l.download=`架電記録_全履歴_${getTodayString()}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l);
   }
