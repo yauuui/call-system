@@ -2744,7 +2744,7 @@
     if(val && !productsList.includes(val)){ productsList.push(val); saveSettingsConfig(); updateSelectUIs(); renderSettingsLists(); document.getElementById("new-product-input").value="";}
   }
   function deleteProduct(p) {
-    if(confirm(`「${p}」を削除しますか？`)){ productsList = productsList.filter(x=>x!==p); saveSettingsConfig(); if(currentProduct===p) currentProduct=ALL_PRODUCTS_KEY; updateSelectUIs(); renderSettingsLists(); handleSelectionChange();}
+    if(confirm(`「${p}」を削除しますか？`)){ productsList = productsList.filter(x=>x!==p); saveSettingsConfig(); if(currentProduct===p) { if (isRunning) stopTimer(); currentProduct=ALL_PRODUCTS_KEY; } updateSelectUIs(); renderSettingsLists(); handleSelectionChange();}
   }
 
   // --- マイリスト・マイトーク管理（アカウントごと。他のアカウントには表示されない） ---
@@ -2919,6 +2919,8 @@
   }
 
   function handleSelectionChange() {
+    // タイマー動作中の切り替えは、current* を書き換える前に止めて、経過時間を「切り替え前」の日付・商材・リスト・トークで確定させる
+    if (isRunning) stopTimer();
     currentDateStr = document.getElementById("date-picker").value || currentDateStr;
     currentProduct = document.getElementById("product-select").value;
     currentList = document.getElementById("list-select").value;
@@ -2930,7 +2932,6 @@
     document.getElementById("panel-disabled-msg").style.display = isAll ? "flex" : "none";
     document.getElementById("timer-status-label").textContent = isAll ? "稼働時間 (全商材合算)" : "稼働時間";
 
-    if (isRunning) stopTimer();
     ensureDataExists(currentUser, currentDateStr, currentProduct); 
     render();
   }
@@ -2977,7 +2978,8 @@
     if (isRunning) {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         if (elapsed > 0) {
-            let state = appData[currentUser][currentDateStr][currentProduct];
+            let state = appData[currentUser]?.[currentDateStr]?.[currentProduct];
+            if (!state) return;
             if (!state.timerSeconds) state.timerSeconds = 0;
             state.timerSeconds += elapsed;
 
@@ -2997,7 +2999,7 @@
   // --- タイマー処理 ---
   function getTotalSeconds() { let sec = getActiveState().timerSeconds || 0; if (isRunning && currentProduct !== ALL_PRODUCTS_KEY) sec += Math.floor((Date.now() - startTime) / 1000); return sec; }
   function startTimer() { if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。"); if (isRunning) return; startTime = Date.now(); isRunning = true; timerInterval = setInterval(() => { updateTimerDisplay(); if(Math.floor(getTotalSeconds()) % 10 === 0) { renderStats(); saveData(); } }, 100); }
-  function stopTimer() { if (!isRunning) return; saveData(); clearInterval(timerInterval); timerInterval = null; isRunning = false; renderStats(); updateTimerDisplay(); }
+  function stopTimer() { if (!isRunning) return; clearInterval(timerInterval); timerInterval = null; saveData(); isRunning = false; renderStats(); updateTimerDisplay(); }
   function resetTimer() { if (currentProduct === ALL_PRODUCTS_KEY) return alert("全商材まとめモードではタイマーを操作できません。"); stopTimer(); appData[currentUser][currentDateStr][currentProduct].timerSeconds = 0; saveData(); renderStats(); updateTimerDisplay(); }
   function updateTimerDisplay() { const t = getTotalSeconds(); const str = `${Math.floor(t/3600).toString().padStart(2,'0')}:${Math.floor((t%3600)/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`; document.getElementById('display-time').textContent = str; if (isMiniMode) { const el = miniDoc.getElementById('mini-display-time'); if (el) el.textContent = str; } }
   function setManualTime() {
