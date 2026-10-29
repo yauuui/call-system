@@ -580,6 +580,43 @@
     .sprint-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .sprint-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; }
     .sprint-form select, .sprint-form input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; }
+    /* 大画面モード（オフィス掲示用） */
+    .board-view { position: fixed; inset: 0; z-index: 9800; background: radial-gradient(circle at 20% 0%, #1e293b, #0b1220 70%); color: #e2e8f0; display: flex; flex-direction: column; padding: 2vh 2.5vw; gap: 2vh; overflow: hidden; }
+    .board-head { display: flex; align-items: center; gap: 2vw; }
+    .board-brand { font-size: clamp(16px, 1.6vw, 28px); font-weight: 700; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; color: #fff; }
+    .board-brand .icon { width: 1.4em; height: 1.4em; color: #5eead4; }
+    .board-brand span { font-weight: 600; color: #94a3b8; letter-spacing: 0; margin-left: 10px; }
+    .board-clock { margin-left: auto; font-size: clamp(22px, 2.6vw, 48px); font-weight: 300; font-variant-numeric: tabular-nums; color: #fff; }
+    .board-close { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .board-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.7fr 1fr; gap: 2vw; }
+    .board-main { display: flex; flex-direction: column; gap: 2vh; min-height: 0; }
+    .board-label { font-size: clamp(12px, 1.1vw, 20px); font-weight: 700; color: #94a3b8; margin-bottom: 1vh; }
+    .board-team { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2.2vh 2vw; }
+    .board-team-count { font-size: clamp(48px, 7vw, 140px); font-weight: 700; line-height: 1; color: #5eead4; font-variant-numeric: tabular-nums; }
+    .board-team-count.flash { animation: boardFlash 1.6s ease-out; }
+    @keyframes boardFlash { 0% { color: #fde68a; transform: scale(1.08); } 100% { color: #5eead4; transform: scale(1); } }
+    .board-of { font-size: 0.35em; color: #cbd5e1; font-weight: 600; }
+    .board-gauge { height: clamp(14px, 1.6vh, 26px); background: rgba(255,255,255,0.1); border-radius: 13px; overflow: hidden; margin-top: 1.6vh; }
+    .board-gauge > div { height: 100%; width: 0%; background: linear-gradient(90deg, #14b8a6, #5eead4); box-shadow: 0 0 18px rgba(94, 234, 212, 0.6); transition: width 0.6s ease; }
+    .board-team-sub { font-size: clamp(14px, 1.4vw, 26px); font-weight: 700; color: #fde68a; margin-top: 1.2vh; }
+    .board-members { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 15vw, 280px), 1fr)); gap: 1.2vw; align-content: start; overflow: hidden; }
+    .bm-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.4vh 1.2vw; }
+    .bm-card.achieved { border-color: #5eead4; background: rgba(20, 184, 166, 0.12); }
+    .bm-name { font-size: clamp(13px, 1.1vw, 20px); font-weight: 700; color: #fff; display: flex; justify-content: space-between; gap: 6px; }
+    .bm-apo { font-size: clamp(24px, 2.4vw, 44px); font-weight: 700; color: #5eead4; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .bm-apo small { font-size: 0.45em; color: #cbd5e1; font-weight: 600; }
+    .bm-sub { font-size: clamp(11px, 0.85vw, 15px); color: #cbd5e1; }
+    .bm-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 0.8vh; }
+    .bm-bar > div { height: 100%; background: #5eead4; }
+    .board-feed { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2.2vh 1.6vw; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+    #board-feed-list { display: flex; flex-direction: column; gap: 1.2vh; overflow: hidden; }
+    .bf-item { display: flex; align-items: center; gap: 1vw; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 1.3vh 1vw; font-size: clamp(14px, 1.25vw, 24px); }
+    .bf-item.new { animation: feedIn 1.2s ease-out; background: rgba(250, 204, 21, 0.18); }
+    @keyframes feedIn { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .bf-time { color: #94a3b8; font-variant-numeric: tabular-nums; }
+    .bf-name { font-weight: 700; color: #fff; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bf-star { color: #fde68a; font-weight: 700; white-space: nowrap; }
+    .bf-empty { color: #94a3b8; font-size: clamp(13px, 1vw, 18px); }
   </style>
 </head>
 <body>
@@ -695,6 +732,9 @@
 
         <button class="btn-settings-top" onclick="toggleMiniMode()" title="小さな別ウィンドウで表示（他のタブに切り替えても表示されます）">
           <svg class="icon" style="margin:0;"><use href="#icon-minimize"></use></svg>
+        </button>
+        <button class="btn-settings-top" onclick="openBoard()" title="オフィス掲示用の大画面モード（チームの進捗とアポ速報）">
+          <svg class="icon" style="margin:0;"><use href="#icon-chart"></use></svg>
         </button>
         <button class="btn-settings-top" id="btn-callbacks" onclick="openCallbackModal()" title="再架電リマインダー（自分のアカウントにのみ表示されます）">
           <svg class="icon"><use href="#icon-bell"></use></svg> 再架電 <span class="cb-count" id="cb-count"></span>
@@ -1549,6 +1589,30 @@
   </div>
 </div>
 
+<!-- ================= 大画面モード（オフィス掲示用） ================= -->
+<div id="board-view" class="board-view" style="display:none;">
+  <div class="board-head">
+    <div class="board-brand"><svg class="icon"><use href="#icon-phone"></use></svg> CALL BOARD <span id="board-date"></span></div>
+    <div class="board-clock" id="board-clock">--:--</div>
+    <button class="board-close" onclick="closeBoard()" title="元の画面に戻る（Esc）"><svg class="icon"><use href="#icon-x"></use></svg></button>
+  </div>
+  <div class="board-body">
+    <div class="board-main">
+      <div class="board-team">
+        <div class="board-label">本日のチーム総アポ</div>
+        <div class="board-team-count"><span id="board-team-apo">0</span><span class="board-of"> / <span id="board-team-target">0</span> 件</span></div>
+        <div class="board-gauge"><div id="board-team-fill"></div></div>
+        <div class="board-team-sub" id="board-team-sub"></div>
+      </div>
+      <div class="board-members" id="board-members"></div>
+    </div>
+    <div class="board-feed">
+      <div class="board-label">アポ速報</div>
+      <div id="board-feed-list"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= モーダル (再架電リマインダー：アカウントごと) ================= -->
 <div id="callback-modal" class="modal-overlay">
   <div class="modal-content" style="max-width:620px;">
@@ -1848,6 +1912,7 @@
           if (document.getElementById("page-ranking").style.display === "flex") renderPeriodRankings();
           if (document.getElementById("page-analytics").style.display === "flex") renderAnalytics();
           if (document.getElementById("page-listanalysis").style.display === "flex") renderListAnalysis();
+          if (boardOpen) renderBoard();
         }
         isInitialLoad = false;
         document.getElementById("loading-overlay").style.display = "none";
@@ -2085,6 +2150,7 @@
   const COUNT_SHORTCUT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
   function handleCountShortcut(e) {
+    if (boardOpen) { if (e.key === 'Escape') closeBoard(); return; }
     // Ctrl+Z / ⌘+Z：直前のカウント操作を取り消す（入力欄では通常の文字の取り消しを優先）
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z') && !e.isComposing) {
       const t = e.target;
@@ -2917,6 +2983,76 @@
 
       if (document.getElementById('sa-compare-toggle').checked) renderStatusComparison();
       renderWeaknessDiagnosis(uFilter, pFilter, lFilter, tFilter, sD, eD);
+  }
+
+  // --- 大画面モード（オフィス掲示用：チームの進捗とアポ速報をリアルタイムに表示） ---
+  let boardOpen = false, boardTicker = null, boardLastApo = null;
+  function openBoard() {
+    boardOpen = true; boardLastApo = null;
+    document.getElementById('board-view').style.display = 'flex';
+    try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch (e) {}
+    renderBoard();
+    clearInterval(boardTicker);
+    boardTicker = setInterval(() => { renderBoardClock(); if (new Date().getSeconds() === 0) renderBoard(); }, 1000);
+  }
+  function closeBoard() {
+    boardOpen = false;
+    document.getElementById('board-view').style.display = 'none';
+    clearInterval(boardTicker); boardTicker = null;
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+  }
+  function renderBoardClock() {
+    const d = new Date();
+    document.getElementById('board-clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  function renderBoard() {
+    if (!boardOpen) return;
+    const date = getTodayString();
+    const [, m, d] = date.split('-');
+    document.getElementById('board-date').textContent = `${+m}/${+d}（${'日月火水木金土'[new Date().getDay()]}）`;
+    renderBoardClock();
+
+    // チーム目標：KPI/KGI のシフトの予想合計（コールカウント画面と同じ）
+    const kpi = (() => { const saved = currentDateStr; currentDateStr = date; const r = getTodayKpiStats(); currentDateStr = saved; return r; })();
+    const members = usersList.map(u => {
+      const t = getDayTotals(u, date);
+      let sec = 0; const day = appData[u]?.[date] || {}; for (const p in day) sec += day[p].timerSeconds || 0;
+      return { name: u, ...t, cph: sec > 0 ? t.calls / (sec / 3600) : 0, onShift: kpi.shiftUsers.includes(u) };
+    }).filter(x => x.onShift || x.calls > 0);
+    const teamApo = members.reduce((a, x) => a + x.apo, 0), target = kpi.target || 0;
+    const countEl = document.getElementById('board-team-apo');
+    if (boardLastApo !== null && teamApo > boardLastApo) { const box = countEl.parentElement; box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash'); }
+    boardLastApo = teamApo;
+    countEl.textContent = +teamApo.toFixed(1);
+    document.getElementById('board-team-target').textContent = target;
+    document.getElementById('board-team-fill').style.width = `${target > 0 ? Math.min(100, teamApo / target * 100) : 0}%`;
+    const teamCalls = members.reduce((a, x) => a + x.calls, 0), teamConn = members.reduce((a, x) => a + x.connect, 0);
+    const remain = target - teamApo;
+    document.getElementById('board-team-sub').textContent = (target > 0 ? (remain > 0 ? `チームであと${+remain.toFixed(1)}件！` : '🎉 チーム目標達成！') + '　' : '') + `総架電 ${teamCalls}件・受付突破率 ${teamCalls ? (teamConn / teamCalls * 100).toFixed(1) : '0.0'}%`;
+
+    // メンバー：アポの多い順（同数なら架電数）。目標達成は緑の枠
+    members.sort((a, b) => b.apo - a.apo || b.calls - a.calls);
+    document.getElementById('board-members').innerHTML = members.length ? members.map(x => {
+      const achieved = x.apo >= x.target && x.calls > 0;
+      return `<div class="bm-card ${achieved ? 'achieved' : ''}"><div class="bm-name"><span>${escapeHTML(x.name)}</span>${achieved ? '<span>🎉</span>' : ''}</div>
+        <div class="bm-apo">${+x.apo.toFixed(1)}<small> / ${x.target}件</small></div>
+        <div class="bm-sub">${x.calls}架電・${x.cph.toFixed(1)}件/h</div>
+        <div class="bm-bar"><div style="width:${x.target > 0 ? Math.min(100, x.apo / x.target * 100) : 0}%;"></div></div></div>`;
+    }).join('') : '<div class="bf-empty">今日の架電記録・シフトはまだありません</div>';
+
+    // アポ速報：全員の架電ログからアポ獲得を新しい順に
+    const feed = [];
+    for (const u in appData) {
+      const day = appData[u]?.[date] || {};
+      for (const p in day) (day[p].callLog || []).forEach(e => { if (e.id === 9 && e.d > 0) feed.push({ t: e.t, user: u, product: p }); });
+    }
+    feed.sort((a, b) => b.t - a.t);
+    const now = Date.now();
+    document.getElementById('board-feed-list').innerHTML = feed.length ? feed.slice(0, 8).map(f => {
+      const tm = new Date(f.t);
+      return `<div class="bf-item ${now - f.t < 60000 ? 'new' : ''}"><span class="bf-time">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span><span class="bf-name">${escapeHTML(f.user)}<span style="font-weight:600; color:#94a3b8; font-size:0.8em;">（${escapeHTML(f.product)}）</span></span><span class="bf-star">★ アポ獲得</span></div>`;
+    }).join('') : '<div class="bf-empty">今日のアポ獲得はまだありません。最初の1件を狙いましょう！</div>';
   }
 
   // --- スプリント（短い集中タイム） ---
@@ -4670,6 +4806,7 @@
     renderMotivationBand();
     renderGrowth();
     renderCoachMessage();
+    if (boardOpen) renderBoard();
   }
 
   // --- 成長の見える化：日ごとの集計・連続記録・週次の振り返り・バッジ・声かけ ---
