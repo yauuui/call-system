@@ -545,6 +545,19 @@
     .ab-verdict { margin-top: 10px; padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; background: #f8fafc; border: 1px solid var(--border); }
     .ab-verdict.decided { background: #f0fdf4; border-color: #86efac; color: #065f46; }
     .ab-note { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    /* 曜日×時間帯ヒートマップ */
+    .hm-summary { font-size: 13px; margin-bottom: 10px; line-height: 1.6; }
+    .hm-table { border-collapse: separate; border-spacing: 3px; width: 100%; table-layout: fixed; white-space: nowrap; }
+    .hm-table th { background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 700; padding: 2px; text-align: center; border: none; }
+    .hm-table th.hm-day { width: 36px; }
+    .hm-table td { height: 42px; border-radius: 4px; text-align: center; font-size: 12px; font-weight: 700; border: none; padding: 2px; line-height: 1.2; }
+    .hm-table td .hm-n { display: block; font-size: 10px; font-weight: 600; opacity: 0.8; }
+    .hm-table td.hm-empty { background: #f8fafc; }
+    .hm-table td.hm-low { background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 4px, #e2e8f0 4px, #e2e8f0 8px); color: var(--text-muted); }
+    .hm-table tbody tr:hover { background: transparent; }
+    .hm-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); margin-top: 8px; flex-wrap: wrap; }
+    .hm-legend .hm-scale { width: 120px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #ccfbf1, #0f766e); }
+    .hm-legend .hm-lowbox { width: 14px; height: 10px; border-radius: 2px; background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 3px, #e2e8f0 3px, #e2e8f0 6px); }
   </style>
 </head>
 <body>
@@ -1308,6 +1321,20 @@
               <tbody id="la-table-body"></tbody>
             </table>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span style="display:flex; align-items:center; gap:6px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-calendar"></use></svg> 曜日×時間帯ヒートマップ（いつかけるとつながりやすいか）</span>
+            <div class="filter-group"><label for="hm-metric">指標</label>
+              <select id="hm-metric" onchange="renderHeatmap()">
+                <option value="brk">受付突破率</option>
+                <option value="apo">アポ率</option>
+                <option value="calls">架電数</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body" id="heatmap"></div>
         </div>
 
         <div class="card">
@@ -4873,6 +4900,7 @@
     const tb = document.getElementById("la-table-body"); tb.innerHTML = "";
     renderListAnalysisChart(rows);
     renderTalkAB();
+    renderHeatmap();
     if (!rows.length) {
       tb.innerHTML = `<tr><td colspan="${LA_COLUMNS.length}" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>`;
       return;
@@ -4891,6 +4919,90 @@
       tr.innerHTML = `<td style="font-weight:600; color:var(--accent); text-align:left;">${escapeHTML(r.group)}${badge}</td><td>${r.hours.toFixed(1)}</td><td style="font-weight:700;">${r.tot}</td><td>${r.uk}</td><td>${r.fu}</td><td>${r.fuz}</td><td>${r.tbk}</td><td>${r.mokuteki}</td><td>${r.meritKinou}</td><td>${r.meritBene}</td><td>${r.kotowarizurai}</td><td>${r.closing}</td><td>${r.counter}</td><td style="color:var(--danger); font-weight:700;">${r.apo}</td><td class="la-rate">${r.brk.toFixed(1)}%</td><td class="la-rate">${r.apoRate.toFixed(1)}%</td><td class="la-rate">${r.tantoRate.toFixed(1)}%</td><td style="background:#f4f6f9; font-weight:700;">${r.cph.toFixed(1)}</td>`;
       tb.appendChild(tr);
     });
+  }
+
+  // --- 曜日×時間帯ヒートマップ ---
+  // リスト/トークが「全部」なら商材単位の時間帯データ、絞り込み中はリスト×トーク別の時間帯データを使う
+  const HM_DAYS = ['月', '火', '水', '木', '金', '土', '日'];
+  const HM_COLS = ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'];
+  const HM_MIN_CALLS = 5;
+  function renderHeatmap() {
+    const box = document.getElementById('heatmap');
+    if (!box) return;
+    const uFilter = document.getElementById("la-user-select").value;
+    const pFilter = document.getElementById("la-product-select").value;
+    const lFilter = document.getElementById("la-list-select").value;
+    const tFilter = document.getElementById("la-talk-select").value;
+    const sD = document.getElementById("la-start-date").value;
+    const eD = document.getElementById("la-end-date").value;
+    const metric = document.getElementById('hm-metric').value;
+    const isFiltered = lFilter !== '__ALL__' || tFilter !== '__ALL__';
+    // cells[曜日(月=0)][時間帯] = { calls, connect, apo }
+    const cells = HM_DAYS.map(() => HM_COLS.map(() => ({ calls: 0, connect: 0, apo: 0 })));
+    const add = (dow, h) => {
+      if (!h) return;
+      for (let i = 0; i < 10; i++) {
+        const conn = (h.tantoBK?.[i] || 0) + (h.apo?.[i] || 0);
+        const c = cells[dow][i];
+        c.calls += (h.uketsuke?.[i] || 0) + (h.futsu?.[i] || 0) + (h.fuzai?.[i] || 0) + conn;
+        c.connect += conn; c.apo += h.apo?.[i] || 0;
+      }
+    };
+    for (const user in appData) {
+      if (uFilter !== "__ALL_USERS__" && user !== uFilter) continue;
+      for (const date in appData[user]) {
+        if ((sD && date < sD) || (eD && date > eD)) continue;
+        const dow = (new Date(`${date}T00:00:00`).getDay() + 6) % 7;
+        for (const p in appData[user][date]) {
+          if (pFilter !== "__ALL_PRODUCTS__" && p !== pFilter) continue;
+          const st = appData[user][date][p];
+          if (!isFiltered) { add(dow, st.hourly); continue; }
+          for (const key in (st.sessionsByKey || {})) {
+            const sess = st.sessionsByKey[key];
+            if (lFilter !== '__ALL__' && sess.list !== lFilter) continue;
+            if (tFilter !== '__ALL__' && sess.talk !== tFilter) continue;
+            add(dow, sess.hourly);
+          }
+        }
+      }
+    }
+    const val = c => metric === 'calls' ? c.calls : (c.calls > 0 ? (metric === 'brk' ? c.connect : c.apo) / c.calls * 100 : null);
+    const fmt = v => metric === 'calls' ? String(v) : v.toFixed(1) + '%';
+    const all = cells.flat();
+    if (!all.some(c => c.calls > 0)) {
+      box.innerHTML = `<div class="hm-summary" style="color:var(--text-muted);">この条件の時間帯別の記録がありません。${isFiltered ? '（リスト/トーク別の時間帯データは、その記録を始めた後の架電分のみです）' : ''}</div>`;
+      return;
+    }
+    // 土日は記録があるときだけ表示する
+    const days = HM_DAYS.map((d, i) => i).filter(i => i < 5 || cells[i].some(c => c.calls > 0));
+    const usable = days.flatMap(d => cells[d].map((c, i) => ({ d, i, c, v: val(c) }))).filter(x => x.c.calls >= HM_MIN_CALLS);
+    const vs = usable.map(x => x.v);
+    const lo = Math.min(...vs), hi = Math.max(...vs);
+    const color = v => {
+      const t = hi > lo ? (v - lo) / (hi - lo) : 1;
+      // #ccfbf1 → #0f766e を補間
+      const mix = (a, b) => Math.round(a + (b - a) * t);
+      return { bg: `rgb(${mix(204, 15)}, ${mix(251, 118)}, ${mix(241, 110)})`, fg: t > 0.55 ? '#fff' : '#134e4a' };
+    };
+    const best = usable.slice().sort((a, b) => b.v - a.v || b.c.calls - a.c.calls)[0];
+    const metricLabel = { brk: '受付突破率', apo: 'アポ率', calls: '架電数' }[metric];
+    const summary = best
+      ? (metric === 'calls'
+          ? `いちばん多く架電しているのは <strong>${HM_DAYS[best.d]}曜 ${HM_COLS[best.i]}時</strong>（${best.c.calls}件）です。`
+          : `${metricLabel}がいちばん高いのは <strong>${HM_DAYS[best.d]}曜 ${HM_COLS[best.i]}時</strong>（${fmt(best.v)}、${best.c.calls}件）です。`)
+      : `どのマスも${HM_MIN_CALLS}件未満のため、比べられません。期間を広げてみてください。`;
+    box.innerHTML = `<div class="hm-summary">${summary}</div>
+      <div class="table-container"><table class="hm-table">
+        <thead><tr><th class="hm-day"></th>${HM_COLS.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+        <tbody>${days.map(d => `<tr><th class="hm-day">${HM_DAYS[d]}</th>${cells[d].map((c, i) => {
+          if (!c.calls) return '<td class="hm-empty"></td>';
+          const v = val(c), title = `${HM_DAYS[d]}曜 ${HM_COLS[i]}時：${metricLabel} ${fmt(v)}（架電${c.calls}件・担当${c.connect}件・アポ${c.apo}件）`;
+          if (c.calls < HM_MIN_CALLS) return `<td class="hm-low" title="${title}（件数が少ないため参考値）">${fmt(v)}<span class="hm-n">${c.calls}件</span></td>`;
+          const col = color(v);
+          return `<td style="background:${col.bg}; color:${col.fg};" title="${title}">${fmt(v)}<span class="hm-n">${c.calls}件</span></td>`;
+        }).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+      <div class="hm-legend"><span>低い</span><span class="hm-scale"></span><span>高い</span><span class="hm-lowbox"></span><span>${HM_MIN_CALLS}件未満（参考値）</span><span>※${isFiltered ? 'リスト/トーク別の時間帯データ（記録を始めた後の分）' : '商材単位の時間帯データ'}で集計</span></div>`;
   }
 
   // --- トークのA/B判定 ---
