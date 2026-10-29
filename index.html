@@ -284,6 +284,10 @@
     .mini-disabled-msg { text-align: center; font-size: 11px; color: var(--danger); padding: 15px 5px; font-weight: 600; }
 
     .mini-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; flex-shrink: 0; }
+    .mini-session-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex-shrink: 0; }
+    .mini-session-row label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .mini-session-row select { width: 100%; min-width: 0; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; background: #fff; color: var(--text-main); outline: none; }
+    .mini-session-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2); }
     .mini-stat-box { border-left: 3px solid var(--accent); background: #f8fafc; border-radius: 0 4px 4px 0; padding: 5px 6px; }
     .mini-stat-label { font-size: 9px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-stat-val { font-size: 14px; font-weight: 700; color: var(--text-main); }
@@ -1049,6 +1053,10 @@
   <div class="mini-widget-body">
     <div id="mini-disabled-msg" class="mini-disabled-msg" style="display:none;">※全商材まとめ閲覧モードのため操作できません</div>
     <div id="mini-active-area" class="mini-active-area">
+      <div class="mini-session-row">
+        <label><span class="mini-stat-label">リスト</span><select id="mini-list-select" title="リスト（本体の架電パネルと連動します）"></select></label>
+        <label><span class="mini-stat-label">トーク</span><select id="mini-talk-select" title="トーク（本体の架電パネルと連動します）"></select></label>
+      </div>
       <div class="mini-timer" id="mini-display-time">00:00:00</div>
       <div class="mini-timer-controls">
         <button class="btn btn-primary btn-icon-only" id="mini-btn-start" title="開始"><svg class="icon"><use href="#icon-play"></use></svg></button>
@@ -1554,6 +1562,7 @@
     // ステータス分析の比較モード（比較A／比較B）用セレクト
     populateUserProductListTalkSelects('sa-a');
     populateUserProductListTalkSelects('sa-b');
+    populateMiniListTalkSelects();
 
     const sSel = document.getElementById("script-product-select");
     const currentScriptVal = sSel.value;
@@ -1635,9 +1644,9 @@
     let targetWindow;
     try {
       if ('documentPictureInPicture' in window) {
-        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 480 });
+        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 530 });
       } else {
-        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=520,popup=yes');
+        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=570,popup=yes');
         if (!targetWindow) {
           showToast('ポップアップがブロックされました。ブラウザの設定をご確認ください', '#icon-bell');
           return;
@@ -1670,9 +1679,13 @@
     miniDoc = targetWindow.document;
     miniTargetWindow = targetWindow;
     isMiniMode = true;
+    // 小窓の表示更新は renderStats() 経由で行われ、renderStats() はコールカウント画面の表示中しか動かないため、
+    // 他のタブから小窓を開いた場合もコールカウント画面に切り替えておく（閉じたときもカウント画面に戻る）
+    switchTab('counter');
     document.getElementById('main-app').style.display = 'none';
 
     buildMiniControlPanel();
+    populateMiniListTalkSelects();
     switchMiniView('count');
     renderMini();
 
@@ -1707,6 +1720,27 @@
     document.getElementById('mini-tab-count').addEventListener('click', () => switchMiniView('count'));
     document.getElementById('mini-tab-memo').addEventListener('click', () => switchMiniView('memo'));
     document.getElementById('mini-memo-textarea').addEventListener('input', (e) => scheduleMemoSave(e.target.value));
+    // 小窓でリスト／トークを変えたら本体の選択欄に反映し、本体で切り替えたときと同じ処理を通す
+    document.getElementById('mini-list-select').addEventListener('change', (e) => { document.getElementById('list-select').value = e.target.value; handleSelectionChange(); });
+    document.getElementById('mini-talk-select').addEventListener('change', (e) => { document.getElementById('talk-select').value = e.target.value; handleSelectionChange(); });
+  }
+
+  // 小窓のリスト／トーク選択欄を、本体の #list-select / #talk-select と同じ選択肢・同じ選択値で組み立てる
+  // （小窓が別ウィンドウにあるときは、そのウィンドウのドキュメントで<option>を作る）
+  function populateMiniListTalkSelects() {
+    const fill = (id, names, value) => {
+      const sel = miniDoc.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = '';
+      [[UNSET_LABEL, ''], ...names.map(n => [n, n])].forEach(([label, v]) => {
+        const opt = miniDoc.createElement('option');
+        opt.textContent = label; opt.value = v;
+        sel.appendChild(opt);
+      });
+      sel.value = value;
+    };
+    fill('mini-list-select', listsList, document.getElementById('list-select').value);
+    fill('mini-talk-select', talksList.map(t => t.name), document.getElementById('talk-select').value);
   }
 
   let miniViewMode = 'count';
@@ -1793,6 +1827,11 @@
     if (cphEl) cphEl.textContent = cphNum.toFixed(1);
     if (brkEl) brkEl.textContent = brk + '%';
     if (ordEl) ordEl.textContent = ord + '%';
+
+    ['list', 'talk'].forEach(k => {
+      const sel = miniDoc.getElementById(`mini-${k}-select`);
+      if (sel && miniDoc.activeElement !== sel) sel.value = document.getElementById(`${k}-select`).value;
+    });
 
     const memoEl = miniDoc.getElementById('mini-memo-textarea');
     if (memoEl && miniDoc.activeElement !== memoEl) {
