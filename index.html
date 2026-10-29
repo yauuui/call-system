@@ -570,6 +570,16 @@
     .hl-card.main .hl-sub { color: #cbd5e1; }
     .hl-card.good { border-color: #86efac; background: #f0fdf4; }
     .coach-link { border: 1px solid #99f6e4; background: #f0fdfa; color: var(--accent-hover); border-radius: 12px; padding: 1px 10px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 4px; }
+    /* スプリント */
+    .band-sprint { min-width: 150px; }
+    .sprint-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-top: 3px; }
+    .sprint-bar > div { height: 100%; width: 0%; background: linear-gradient(90deg, #fcd34d, #f59e0b); transition: width 0.4s ease; }
+    .sprint-stop { border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 0 6px; font-size: 10px; cursor: pointer; margin-left: 4px; color: var(--text-muted); }
+    #btn-sprint { border-color: #fcd34d; background: #fffbeb; color: #92400e; font-weight: 700; }
+    #btn-sprint:hover { background: #fef3c7; }
+    .sprint-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sprint-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; }
+    .sprint-form select, .sprint-form input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; }
   </style>
 </head>
 <body>
@@ -779,9 +789,15 @@
             <svg class="icon" style="color:var(--text-muted); flex-shrink:0;"><use href="#icon-edit"></use></svg>
           </div>
           <div class="band-seg band-pace">
-            <div>
-              <div class="band-label">ペース予測</div>
+            <div id="band-pace-normal">
+              <div class="band-label">ペース予測 <button class="sprint-stop" id="btn-sprint" onclick="openSprintModal()" title="スプリント（25分などの短い集中タイム。全商材の架電を合算して数えます）">🏁 スプリント</button></div>
               <div class="band-pace-text" id="pace-short">-</div>
+            </div>
+            <!-- スプリント実行中はペース予測の代わりに表示する -->
+            <div id="band-sprint" class="band-sprint" style="display:none;">
+              <div class="band-label">スプリント 残り <span id="sprint-remaining">--:--</span> <button class="sprint-stop" onclick="finishSprint(true)" title="スプリントを途中で終える">終了</button></div>
+              <div class="band-pace-text" id="sprint-progress-text">0 / 0コール</div>
+              <div class="sprint-bar"><div id="sprint-bar-fill"></div></div>
             </div>
           </div>
         </div>
@@ -1571,6 +1587,25 @@
   </div>
 </div>
 
+<!-- ================= モーダル (スプリント) ================= -->
+<div id="sprint-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:420px;">
+    <div class="modal-header">
+      <h2><svg class="icon"><use href="#icon-flag"></use></svg> スプリントを始める</h2>
+      <button class="btn-close" onclick="closeSprintModal()"><svg class="icon" style="width:24px; height:24px;"><use href="#icon-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">短い時間で小さな目標を決めて集中します。調子が落ちたときの立て直しに使ってください。</div>
+      <div class="sprint-form">
+        <label>時間<select id="sprint-minutes" onchange="suggestSprintTarget()"><option value="15">15分</option><option value="25" selected>25分</option><option value="30">30分</option></select></label>
+        <label>目標コール数<input type="number" id="sprint-target" min="1" step="1"></label>
+      </div>
+      <div id="sprint-target-hint" style="font-size:11px; color:var(--text-muted); margin:6px 0 16px;"></div>
+      <div style="text-align:right;"><button class="btn btn-primary" onclick="startSprint()"><svg class="icon"><use href="#icon-flag"></use></svg> スタート</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= モーダル (進捗テンプレ) ================= -->
 <div id="template-modal" class="modal-overlay">
   <div class="modal-content">
@@ -1893,7 +1928,7 @@
         document.getElementById("edit-mode-checkbox").checked = false;
     }
 
-    updateSelectUIs(); buildControlPanel(); initCounterSearch(); updateProductModeUI(); renderCelebratePrefs(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
+    updateSelectUIs(); buildControlPanel(); initCounterSearch(); updateProductModeUI(); renderCelebratePrefs(); resumeSprint(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
   }
 
   function logout() {
@@ -1904,6 +1939,7 @@
     if(myClapsUnsubscribe) { myClapsUnsubscribe(); myClapsUnsubscribe = null; }
     if(callbacksUnsubscribe) { callbacksUnsubscribe(); callbacksUnsubscribe = null; }
     callbacks = []; renderCallbacks();
+    stopSprintTicker(); activeSprint = null;
     listsList = []; talksList = []; currentList = ""; currentTalk = "";
     if (isMiniMode) closeMiniWindow();
     document.getElementById("main-app").style.display = "none";
@@ -2881,6 +2917,116 @@
 
       if (document.getElementById('sa-compare-toggle').checked) renderStatusComparison();
       renderWeaknessDiagnosis(uFilter, pFilter, lFilter, tFilter, sD, eD);
+  }
+
+  // --- スプリント（短い集中タイム） ---
+  // 実行中のスプリントは端末ごとに保存し、読み込み直しても続きから再開する。
+  // コール数は架電ログ（全商材）から数えるので、途中で商材を切り替えても合算される
+  let activeSprint = null, sprintTicker = null;
+  const sprintKey = () => 'kaden_sprint_active_' + currentUser;
+  const sprintHistKey = () => 'kaden_sprints_' + currentUser;
+
+  // 今日のペース（なければ架電目標）から、時間内の目標コール数を提案する
+  function suggestSprintTarget() {
+    const minutes = +document.getElementById('sprint-minutes').value;
+    const st = getAggregatedState();
+    let tot = 0; for (let i = 0; i < 10; i++) tot += st.counts[i] || 0;
+    let sec = 0; const day = appData[currentUser]?.[getTodayString()] || {}; for (const p in day) sec += day[p].timerSeconds || 0;
+    const cph = sec >= 600 && tot > 0 ? tot / (sec / 3600) : (st.targetCph || 20);
+    const target = Math.max(1, Math.round(cph * minutes / 60 * 1.1));
+    document.getElementById('sprint-target').value = target;
+    document.getElementById('sprint-target-hint').textContent = `${sec >= 600 && tot > 0 ? `今日のペース ${cph.toFixed(1)}件/h` : `架電目標 ${cph}件/h`} の1割増しで提案しています`;
+  }
+  function openSprintModal() {
+    if (activeSprint) { showToast('スプリント実行中です（状況帯の「終了」で終えられます）', '#icon-flag'); return; }
+    suggestSprintTarget();
+    document.getElementById('sprint-modal').style.display = 'flex';
+  }
+  function closeSprintModal() { document.getElementById('sprint-modal').style.display = 'none'; }
+
+  function startSprint() {
+    const minutes = +document.getElementById('sprint-minutes').value;
+    const target = Math.max(1, parseInt(document.getElementById('sprint-target').value) || 1);
+    const now = Date.now();
+    activeSprint = { start: now, end: now + minutes * 60000, minutes, target, date: getTodayString() };
+    try { localStorage.setItem(sprintKey(), JSON.stringify(activeSprint)); } catch (e) {}
+    closeSprintModal();
+    beginSprintTicker();
+    showToast(`${minutes}分スプリント開始！ 目標 ${target}コール`, '#icon-flag');
+  }
+  function resumeSprint() {
+    stopSprintTicker(); activeSprint = null;
+    let s2 = null;
+    try { s2 = JSON.parse(localStorage.getItem(sprintKey())); } catch (e) {}
+    if (!s2) { renderSprint(); return; }
+    activeSprint = s2;
+    if (Date.now() >= s2.end) finishSprint(false); else beginSprintTicker();
+  }
+  function beginSprintTicker() {
+    stopSprintTicker();
+    renderSprint();
+    sprintTicker = setInterval(() => { if (activeSprint && Date.now() >= activeSprint.end) finishSprint(false); else renderSprint(); }, 1000);
+  }
+  function stopSprintTicker() { if (sprintTicker) { clearInterval(sprintTicker); sprintTicker = null; } }
+
+  // スプリント中（start〜end）の架電ログを全商材から集計する
+  function sprintStats(sp) {
+    const day = appData[currentUser]?.[sp.date] || {};
+    let calls = 0, connect = 0, apo = 0;
+    for (const p in day) (day[p].callLog || []).forEach(e => {
+      if (e.t < sp.start || e.t > sp.end) return;
+      const sign = e.d > 0 ? 1 : -1;
+      calls += sign;
+      if (e.id >= 3) connect += sign;
+      if (e.id === 9) apo += e.d;
+    });
+    return { calls: Math.max(0, calls), connect: Math.max(0, connect), apo: Math.max(0, +apo.toFixed(1)) };
+  }
+
+  function renderSprint() {
+    const normal = document.getElementById('band-pace-normal'), box = document.getElementById('band-sprint');
+    if (!box) return;
+    if (!activeSprint) {
+      normal.style.display = ''; box.style.display = 'none';
+      renderPaceForecast();
+      return;
+    }
+    const st = sprintStats(activeSprint);
+    const left = Math.max(0, activeSprint.end - Date.now());
+    const mmss = `${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`;
+    normal.style.display = 'none'; box.style.display = '';
+    document.getElementById('sprint-remaining').textContent = mmss;
+    document.getElementById('sprint-progress-text').textContent = `${st.calls} / ${activeSprint.target}コール`;
+    document.getElementById('sprint-bar-fill').style.width = `${Math.min(100, st.calls / activeSprint.target * 100)}%`;
+    if (isMiniMode) {
+      const m = miniDoc.getElementById('mini-pace');
+      if (m) { m.style.display = 'block'; m.className = 'mini-pace'; m.textContent = `🏁 スプリント 残り${mmss}｜${st.calls}/${activeSprint.target}コール`; m.title = ''; }
+    }
+  }
+
+  // 終了：結果を保存し、今日の前回のスプリントと比べて知らせる
+  function finishSprint(early) {
+    if (!activeSprint) return;
+    const sp = activeSprint;
+    if (early) sp.end = Math.min(sp.end, Date.now());
+    const st = sprintStats(sp);
+    let hist = [];
+    try { hist = JSON.parse(localStorage.getItem(sprintHistKey())) || []; } catch (e) {}
+    const prevToday = hist.filter(h => h.date === sp.date).slice(-1)[0];
+    hist.push({ ...sp, ...st });
+    try { localStorage.setItem(sprintHistKey(), JSON.stringify(hist.slice(-50))); localStorage.removeItem(sprintKey()); } catch (e) {}
+    activeSprint = null;
+    stopSprintTicker();
+    renderSprint();
+    const achieved = st.calls >= sp.target;
+    const cmp = prevToday ? `（前回 ${prevToday.calls}コール${st.calls > prevToday.calls ? `、+${st.calls - prevToday.calls}` : ''}）` : '';
+    const msg = `${early ? 'スプリントを終了しました' : `${sp.minutes}分スプリント終了！`} ${st.calls}コール（目標 ${sp.target}${achieved ? '：達成🎉' : ''}）${cmp}・担当${st.connect}・アポ${st.apo}`;
+    showToast(msg, '#icon-flag', { label: 'もう1本', doneLabel: '開きました', onClick: openSprintModal });
+    if (isMiniMode) {
+      const m = miniDoc.getElementById('mini-pace');
+      if (m) { m.style.display = 'block'; m.className = `mini-pace ${achieved ? 'pace-ok' : ''}`; m.textContent = `🏁 ${st.calls}/${sp.target}コール${achieved ? ' 達成🎉' : ''}（担当${st.connect}・アポ${st.apo}）`; }
+    }
+    if (achieved && !early && getCelebratePrefs().sound) playApoChime(isMiniMode ? miniDoc.defaultView : window);
   }
 
   // --- 今日のハイライトと日報（表示中の日付・ログイン中のアカウント・全商材） ---
