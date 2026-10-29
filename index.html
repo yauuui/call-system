@@ -425,6 +425,19 @@
     .details-hint { font-size: 11px; font-weight: 600; color: var(--text-muted); }
     .counter-details-body { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
 
+    /* アポ獲得の演出・拍手 */
+    #toast-container .toast { max-width: min(460px, calc(100vw - 40px)); }
+    #toast-container .toast > span { flex: 1; min-width: 0; }
+    .toast-action { margin-left: 6px; background: #f0fdfa; border: 1px solid #99f6e4; color: var(--accent-hover); border-radius: 14px; padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .toast-action:hover:not(:disabled) { background: #ccfbf1; }
+    .toast-action:disabled { opacity: 0.7; cursor: default; }
+    .my-claps { margin-left: auto; font-size: 11px; color: #fde68a; }
+    .pref-check { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 4px; cursor: pointer; }
+    .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 10002; }
+    .confetti-piece { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: 0.95; animation: confettiFall var(--dur) cubic-bezier(.25,.6,.4,1) forwards; }
+    @keyframes confettiFall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: 0.9; } }
+    .apo-burst { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.6); background: #059669; color: #fff; font-size: 26px; font-weight: 700; padding: 14px 28px; border-radius: 40px; box-shadow: 0 12px 30px -6px rgba(5, 150, 105, 0.6); pointer-events: none; z-index: 10003; animation: apoBurst 1.3s ease-out forwards; white-space: nowrap; }
+    @keyframes apoBurst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
   </style>
 </head>
 <body>
@@ -654,7 +667,7 @@
             <div class="moti-sub" id="self-best-sub"></div>
           </div>
           <div class="moti-tile team" id="team-tile">
-            <div class="moti-head"><svg class="icon"><use href="#icon-star"></use></svg> 本日のチーム総アポ</div>
+            <div class="moti-head"><svg class="icon"><use href="#icon-star"></use></svg> 本日のチーム総アポ <span class="my-claps" id="my-claps" title="今日あなたに届いた拍手"></span></div>
             <div class="moti-main"><span id="team-apo-count">0</span> <span class="moti-of">/ <span id="team-apo-target">0</span> 件</span> <span class="moti-remaining" id="team-apo-remaining"></span></div>
             <div class="moti-gauge"><div class="moti-gauge-fill team" id="team-apo-progress" style="width:0%;"></div></div>
             <div class="moti-sub" id="team-apo-sub">チームみんなで溜めるゲージです</div>
@@ -709,6 +722,9 @@
                 <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="setManualTime()">設定</button>
               </div>
               <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">選択中の商材の稼働時間を、入力した値に置き換えます。</div>
+              <div style="font-size:12px; font-weight:700; margin:14px 0 6px;">アポ獲得時の演出（この端末だけの設定）</div>
+              <label class="pref-check"><input type="checkbox" id="pref-confetti" onchange="saveCelebratePrefs()"> 紙吹雪を表示する</label>
+              <label class="pref-check"><input type="checkbox" id="pref-sound" onchange="saveCelebratePrefs()"> 音を鳴らす</label>
             </div>
           </div>
         </details>
@@ -1365,6 +1381,7 @@
   let prevRankingState = { apo: [], cph: [] };
   let personalScriptUnsubscribe = null;
   let personalListsTalksUnsubscribe = null;
+  let myClapsUnsubscribe = null;
   
   let breakdownChartInstance = null;
   let hourlyChartInstance = null;
@@ -1457,13 +1474,24 @@
     if(currentUser === "") setupLogin();
   }
 
-  function showToast(message, iconId = "#icon-bell") {
+  // action を渡すと、トーストにボタンを付ける（押しやすいよう表示時間を延ばす）。{ label, doneLabel, onClick }
+  function showToast(message, iconId = "#icon-bell", action = null) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerHTML = `<svg class="icon" style="color:var(--accent); width:24px; height:24px;"><use href="${iconId}"></use></svg> <span>${message}</span>`;
+    let life = 5000;
+    if (action) {
+      life = 9000;
+      toast.style.animation = 'slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 8.5s forwards';
+      const btn = document.createElement('button');
+      btn.className = 'toast-action';
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => { action.onClick(); btn.textContent = action.doneLabel || '送りました'; btn.disabled = true; });
+      toast.appendChild(btn);
+    }
     container.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, 5000);
+    setTimeout(() => { toast.remove(); }, life);
   }
 
   function calcApoFromDayData(dayData) {
@@ -1505,7 +1533,10 @@
               let diff = newApo - prevApoCounts[d.user];
               for(let i=0; i<Math.floor(diff); i++){
                   if (d.user === currentUser) showToast(`ナイスアポ！ あなたがアポを獲得しました`, "#icon-star");
-                  else showToast(`${d.user} さんがアポを獲得しました`, "#icon-star");
+                  else {
+                      const target = d.user;
+                      showToast(`${escapeHTML(target)} さんがアポを獲得しました`, "#icon-star", { label: '👏 拍手', doneLabel: '👏 送りました', onClick: () => sendClap(target) });
+                  }
               }
             }
             prevApoCounts[d.user] = newApo;
@@ -1576,6 +1607,8 @@
         scriptData.personal = JSON.parse(localStorage.getItem("kaden_personal_scripts_" + currentUser)) || {};
     }
 
+    subscribeMyClaps();
+
     if(personalListsTalksUnsubscribe) personalListsTalksUnsubscribe();
     if(db) {
         personalListsTalksUnsubscribe = db.collection('kaden_personal_lists_talks').doc(currentUser).onSnapshot(doc => {
@@ -1605,7 +1638,7 @@
         document.getElementById("edit-mode-checkbox").checked = false;
     }
 
-    updateSelectUIs(); buildControlPanel(); updateProductModeUI(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
+    updateSelectUIs(); buildControlPanel(); updateProductModeUI(); renderCelebratePrefs(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
   }
 
   function logout() {
@@ -1613,6 +1646,7 @@
     currentUser = "";
     if(personalScriptUnsubscribe) { personalScriptUnsubscribe(); personalScriptUnsubscribe = null; }
     if(personalListsTalksUnsubscribe) { personalListsTalksUnsubscribe(); personalListsTalksUnsubscribe = null; }
+    if(myClapsUnsubscribe) { myClapsUnsubscribe(); myClapsUnsubscribe = null; }
     listsList = []; talksList = []; currentList = ""; currentTalk = "";
     if (isMiniMode) closeMiniWindow();
     document.getElementById("main-app").style.display = "none";
@@ -3338,6 +3372,112 @@
 
     saveData(); render();
     showUndoBar(entry);
+    if (id === 9 && actualDelta > 0) celebrateApo();
+  }
+
+  // --- アポ獲得の演出（紙吹雪・音）と拍手 ---
+  // 設定は端末ごと（localStorage）。紙吹雪は初期設定ON、音はオフィスでの利用を考えて初期設定OFF
+  function getCelebratePrefs() {
+    let p = {};
+    try { p = JSON.parse(localStorage.getItem('kaden_celebrate_prefs_' + currentUser)) || {}; } catch (e) {}
+    return { confetti: p.confetti !== false, sound: p.sound === true };
+  }
+  function saveCelebratePrefs() {
+    const p = { confetti: document.getElementById('pref-confetti').checked, sound: document.getElementById('pref-sound').checked };
+    try { localStorage.setItem('kaden_celebrate_prefs_' + currentUser, JSON.stringify(p)); } catch (e) {}
+  }
+  function renderCelebratePrefs() {
+    const p = getCelebratePrefs();
+    document.getElementById('pref-confetti').checked = p.confetti;
+    document.getElementById('pref-sound').checked = p.sound;
+  }
+
+  // 自分がアポを獲得したときの演出。小窓表示中は小窓側に出す。動きを減らす設定の端末では紙吹雪を出さない
+  function celebrateApo() {
+    const prefs = getCelebratePrefs();
+    const doc = isMiniMode ? miniDoc : document;
+    const win = doc.defaultView || window;
+    if (prefs.sound) playApoChime(win);
+    if (!prefs.confetti || win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const layer = doc.createElement('div');
+    layer.className = 'confetti-layer';
+    const colors = ['#14b8a6', '#5eead4', '#f59e0b', '#fcd34d', '#3b82f6', '#f472b6', '#a78bfa'];
+    const n = isMiniMode ? 40 : 80;
+    for (let i = 0; i < n; i++) {
+      const piece = doc.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = `${Math.random() * 100}%`;
+      piece.style.background = colors[i % colors.length];
+      piece.style.setProperty('--dur', `${0.9 + Math.random() * 0.6}s`);
+      piece.style.setProperty('--dx', `${(Math.random() - 0.5) * 160}px`);
+      piece.style.setProperty('--rot', `${(Math.random() - 0.5) * 900}deg`);
+      piece.style.animationDelay = `${Math.random() * 0.15}s`;
+      layer.appendChild(piece);
+    }
+    const burst = doc.createElement('div');
+    burst.className = 'apo-burst';
+    burst.textContent = '★ アポ獲得！';
+    doc.body.append(layer, burst);
+    setTimeout(() => { layer.remove(); burst.remove(); }, 1800);
+  }
+
+  function playApoChime(win) {
+    try {
+      const AC = win.AudioContext || win.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      [[880, 0], [1318.5, 0.12]].forEach(([freq, at]) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + at);
+        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.35);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + at); osc.stop(ctx.currentTime + at + 0.4);
+      });
+      setTimeout(() => ctx.close(), 800);
+    } catch (e) {}
+  }
+
+  // 拍手：kaden_claps/{受け取る人}_{日付} に、送った人ごとの回数を加算する
+  function sendClap(toUser) {
+    const date = getTodayString();
+    if (db) {
+      db.collection('kaden_claps').doc(`${toUser}_${date}`).set({
+        user: toUser, date,
+        claps: { [currentUser]: firebase.firestore.FieldValue.increment(1) },
+        last: { from: currentUser, at: firebase.firestore.FieldValue.serverTimestamp() }
+      }, { merge: true });
+    } else {
+      showToast('オフライン（ローカル）モードでは拍手を送れません');
+    }
+  }
+
+  // 自分宛ての拍手を購読し、増えたら通知する（読み込み直後の既存分は通知しない）
+  let myClapTotals = null;
+  function subscribeMyClaps() {
+    if (myClapsUnsubscribe) { myClapsUnsubscribe(); myClapsUnsubscribe = null; }
+    myClapTotals = null;
+    renderMyClaps({});
+    if (!db) return;
+    myClapsUnsubscribe = db.collection('kaden_claps').doc(`${currentUser}_${getTodayString()}`).onSnapshot(doc => {
+      const claps = (doc.exists && doc.data().claps) || {};
+      if (myClapTotals) {
+        for (const from in claps) {
+          const added = (claps[from] || 0) - (myClapTotals[from] || 0);
+          if (added > 0 && from !== currentUser) showToast(`${escapeHTML(from)} さんから👏が届きました`, '#icon-star');
+        }
+      }
+      myClapTotals = { ...claps };
+      renderMyClaps(claps);
+    });
+  }
+  function renderMyClaps(claps) {
+    const el = document.getElementById('my-claps');
+    if (!el) return;
+    const total = Object.values(claps).reduce((a, b) => a + (b || 0), 0);
+    el.textContent = total > 0 ? `あなたへの👏 ${total}` : '';
+    el.title = total > 0 ? Object.entries(claps).map(([f, n]) => `${f}: ${n}`).join(' / ') : '';
   }
 
   // --- 架電ログ・取り消し ---
