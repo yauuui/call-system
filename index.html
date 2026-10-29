@@ -818,7 +818,7 @@
                 <div class="card">
                     <div class="card-header">時間帯ごとの推移 (受付BK vs 担当不在 vs 担当コネクト)</div>
                     <div class="card-body">
-                        <div id="sa-hourly-filter-note" style="display:none; font-size:12px; color:var(--text-muted); text-align:center; padding:30px 10px;">※リスト/トークで絞り込み中は、時間帯別の内訳データがないため表示できません（全リスト・全トークの選択時のみ表示されます）</div>
+                        <div id="sa-hourly-filter-note" style="display:none; font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:4px; padding:6px 8px; margin-bottom:8px;"></div>
                         <div id="sa-hourly-chart-wrap" class="chart-container" style="height: 200px;">
                             <canvas id="sa-hourly-chart"></canvas>
                         </div>
@@ -858,7 +858,7 @@
           <div class="card">
             <div class="card-header">時間帯別 転換率の推移（受付突破率・アポ率）</div>
             <div class="card-body">
-              <div id="sa-ratehourly-filter-note" style="display:none; font-size:12px; color:var(--text-muted); text-align:center; padding:30px 10px;">※リスト/トークで絞り込み中は、時間帯別の内訳データがないため表示できません（全リスト・全トークの選択時のみ表示されます）</div>
+              <div id="sa-ratehourly-filter-note" style="display:none; font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:4px; padding:6px 8px; margin-bottom:8px;"></div>
               <div id="sa-ratehourly-chart-wrap" class="chart-container" style="height: 220px;">
                 <canvas id="sa-rate-hourly-chart"></canvas>
               </div>
@@ -867,7 +867,7 @@
           <div class="card">
             <div class="card-header">時間帯別 ステージ離脱の内訳</div>
             <div class="card-body">
-              <div id="sa-substephourly-filter-note" style="display:none; font-size:12px; color:var(--text-muted); text-align:center; padding:30px 10px;">※リスト/トークで絞り込み中は、時間帯別の内訳データがないため表示できません（全リスト・全トークの選択時のみ表示されます）</div>
+              <div id="sa-substephourly-filter-note" style="display:none; font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:4px; padding:6px 8px; margin-bottom:8px;"></div>
               <div id="sa-substephourly-chart-wrap" class="chart-container" style="height: 220px;">
                 <canvas id="sa-substep-hourly-chart"></canvas>
               </div>
@@ -1242,23 +1242,28 @@
     return `${m.getFullYear()}年${String(m.getMonth()+1).padStart(2,'0')}月 第${Math.ceil(m.getDate()/7)}週`;
   }
 
+  // 時間帯別内訳（9-10時〜17-18時、その他の10列）。商材単位の合計と、リスト×トーク別のセッションの両方で同じ形を使う
+  function getEmptyHourly() {
+    return {
+      uketsuke: Array(10).fill(0),
+      futsu: Array(10).fill(0),
+      fuzai: Array(10).fill(0),
+      tantoBK: Array(10).fill(0),
+      apo: Array(10).fill(0),
+      time: Array(10).fill(0),
+      mokuteki: Array(10).fill(0),
+      meritKinou: Array(10).fill(0),
+      meritBene: Array(10).fill(0),
+      kotowarizurai: Array(10).fill(0),
+      closing: Array(10).fill(0),
+      counter: Array(10).fill(0)
+    };
+  }
+
   function getEmptyState() {
     return {
       counts: Array(10).fill(0),
-      hourly: {
-          uketsuke: Array(10).fill(0),
-          futsu: Array(10).fill(0),
-          fuzai: Array(10).fill(0),
-          tantoBK: Array(10).fill(0),
-          apo: Array(10).fill(0),
-          time: Array(10).fill(0),
-          mokuteki: Array(10).fill(0),
-          meritKinou: Array(10).fill(0),
-          meritBene: Array(10).fill(0),
-          kotowarizurai: Array(10).fill(0),
-          closing: Array(10).fill(0),
-          counter: Array(10).fill(0)
-      },
+      hourly: getEmptyHourly(),
       timerSeconds: 0, targetQualitative: "", targetApo: 3, targetCph: 20, memo: ""
     };
   }
@@ -1281,11 +1286,14 @@
         list: list || UNSET_LABEL,
         talk: talk || UNSET_LABEL,
         counts: Array(10).fill(0),
+        hourly: getEmptyHourly(),
         timerSeconds: 0,
         // この組み合わせで最初に架電した時点のトーク内容を記録しておく（後でトークを編集しても、当時使っていた内容を確認できるように）
         talkContentSnapshot: talkObj ? talkObj.content : ""
       };
     }
+    // 時間帯別内訳はこの機能の追加後から記録する。追加前に作られたセッションには、ここで空の内訳を持たせる
+    if (!state.sessionsByKey[key].hourly) state.sessionsByKey[key].hourly = getEmptyHourly();
     return state.sessionsByKey[key];
   }
 
@@ -2098,6 +2106,25 @@
       let hUk = Array(10).fill(0), hFu = Array(10).fill(0), hFz = Array(10).fill(0), hTbk = Array(10).fill(0), hApo = Array(10).fill(0);
       let hMokuteki = Array(10).fill(0), hMeritKinou = Array(10).fill(0), hMeritBene = Array(10).fill(0), hKotowarizurai = Array(10).fill(0), hClosing = Array(10).fill(0), hCounter = Array(10).fill(0);
       let dailyStats = {};
+      // リスト/トーク絞り込み時、時間帯別内訳の記録がない（この機能の追加前の）架電数
+      let hourlyMissingCalls = 0;
+
+      function accumulateHourly(h) {
+          if (!h) return;
+          for(let i=0; i<10; i++) {
+              hUk[i] += h.uketsuke?.[i] || 0;
+              hFu[i] += h.futsu?.[i] || 0;
+              hFz[i] += h.fuzai?.[i] || 0;
+              hTbk[i] += h.tantoBK?.[i] || 0;
+              hApo[i] += h.apo?.[i] || 0;
+              hMokuteki[i] += h.mokuteki?.[i] || 0;
+              hMeritKinou[i] += h.meritKinou?.[i] || 0;
+              hMeritBene[i] += h.meritBene?.[i] || 0;
+              hKotowarizurai[i] += h.kotowarizurai?.[i] || 0;
+              hClosing[i] += h.closing?.[i] || 0;
+              hCounter[i] += h.counter?.[i] || 0;
+          }
+      }
 
       function accumulateCounts(c, date) {
           let uk = c[0]||0, fu = c[1]||0, fz = c[2]||0;
@@ -2130,30 +2157,24 @@
                   if (!isFiltered) {
                       // 絞り込みなし：従来通り商材単位の合計（counts/hourly）をそのまま使う
                       accumulateCounts(d.counts || Array(10).fill(0), date);
-                      if (includeHourly) {
-                          for(let i=0; i<10; i++) {
-                              hUk[i] += d.hourly?.uketsuke?.[i] || 0;
-                              hFu[i] += d.hourly?.futsu?.[i] || 0;
-                              hFz[i] += d.hourly?.fuzai?.[i] || 0;
-                              hTbk[i] += d.hourly?.tantoBK?.[i] || 0;
-                              hApo[i] += d.hourly?.apo?.[i] || 0;
-                              hMokuteki[i] += d.hourly?.mokuteki?.[i] || 0;
-                              hMeritKinou[i] += d.hourly?.meritKinou?.[i] || 0;
-                              hMeritBene[i] += d.hourly?.meritBene?.[i] || 0;
-                              hKotowarizurai[i] += d.hourly?.kotowarizurai?.[i] || 0;
-                              hClosing[i] += d.hourly?.closing?.[i] || 0;
-                              hCounter[i] += d.hourly?.counter?.[i] || 0;
-                          }
-                      }
+                      if (includeHourly) accumulateHourly(d.hourly);
                   } else {
                       // リスト/トークで絞り込み：セッション単位の内訳から該当するものだけ合算する
-                      // （時間帯別の内訳はセッション単位では記録していないため、ここでは加算しない）
                       const sessions = d.sessionsByKey || {};
                       for (const key in sessions) {
                           const sess = sessions[key];
                           if (lFilter !== "__ALL__" && sess.list !== lFilter) continue;
                           if (tFilter !== "__ALL__" && sess.talk !== tFilter) continue;
-                          accumulateCounts(sess.counts || Array(10).fill(0), date);
+                          const c = sess.counts || Array(10).fill(0);
+                          accumulateCounts(c, date);
+                          if (includeHourly) {
+                              // セッションの時間帯別内訳は機能追加後の分しかないため、件数が合計に届かない分を「時間帯不明」として数える
+                              accumulateHourly(sess.hourly);
+                              const h = sess.hourly || {};
+                              const callsInCounts = c.reduce((a, b) => a + (b || 0), 0);
+                              const callsInHourly = ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo'].reduce((a, k) => a + (h[k] || []).reduce((x, y) => x + (y || 0), 0), 0);
+                              if (callsInHourly < callsInCounts) hourlyMissingCalls += callsInCounts - callsInHourly;
+                          }
                       }
                   }
               }
@@ -2187,7 +2208,7 @@
       ];
 
       return {
-          isFiltered, totalCalls, totalConnects, totalApo,
+          isFiltered, hourlyMissingCalls, totalCalls, totalConnects, totalApo,
           totalUk, totalFu, totalFz, totalTbk,
           funnelStages, stageDetails, dailyStats,
           hourly: { hUk, hFu, hFz, hTbk, hApo, hMokuteki, hMeritKinou, hMeritBene, hKotowarizurai, hClosing, hCounter }
@@ -2252,27 +2273,33 @@
 
       renderStatusPanel('sa', data);
 
-      // Hourly Trend Chart（セッション単位では時間帯別データを持たないため、絞り込み中は表示できない）
-      document.getElementById('sa-hourly-filter-note').style.display = isFiltered ? 'block' : 'none';
-      document.getElementById('sa-hourly-chart-wrap').style.display = isFiltered ? 'none' : 'block';
+      // リスト/トーク絞り込み中に、時間帯別内訳の記録がない（機能追加前の）架電が含まれる場合は、時間帯系の3グラフに注記を出す
+      const hourlyNote = (isFiltered && data.hourlyMissingCalls > 0)
+          ? `※リスト/トーク別の時間帯データは、記録を始めた後の架電分のみです。対象のうち ${data.hourlyMissingCalls}件は時間帯が不明なため、このグラフには含まれていません。`
+          : '';
+      ['sa-hourly-filter-note', 'sa-ratehourly-filter-note', 'sa-substephourly-filter-note'].forEach(id => {
+          const el = document.getElementById(id);
+          el.textContent = hourlyNote;
+          el.style.display = hourlyNote ? 'block' : 'none';
+      });
+
+      // Hourly Trend Chart
       if (hourlyChartInstance) { hourlyChartInstance.destroy(); hourlyChartInstance = null; }
-      if (!isFiltered) {
-          const ctxHourly = document.getElementById('sa-hourly-chart').getContext('2d');
-          let hConnect = hTbk.map((v, i) => v + hApo[i]);
-          hourlyChartInstance = new Chart(ctxHourly, {
-              type: 'line',
-              data: {
-                  labels: ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'],
-                  datasets: [
-                      { label: '受付BK', data: hUk, borderColor: '#94a3b8', backgroundColor: '#94a3b8', fill: false, tension: 0.3 },
-                      { label: '担当不在', data: hFz, borderColor: '#f87171', backgroundColor: '#f87171', fill: false, tension: 0.3 },
-                      { label: '担当コネクト', data: hConnect, borderColor: '#fbbf24', backgroundColor: '#fbbf24', fill: false, tension: 0.3, borderWidth: 3 },
-                      { label: '★アポ', data: hApo, borderColor: '#14b8a6', backgroundColor: '#14b8a6', fill: false, tension: 0.3, borderWidth: 3 }
-                  ]
-              },
-              options: { maintainAspectRatio: false }
-          });
-      }
+      const ctxHourly = document.getElementById('sa-hourly-chart').getContext('2d');
+      let hConnect = hTbk.map((v, i) => v + hApo[i]);
+      hourlyChartInstance = new Chart(ctxHourly, {
+          type: 'line',
+          data: {
+              labels: ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'],
+              datasets: [
+                  { label: '受付BK', data: hUk, borderColor: '#94a3b8', backgroundColor: '#94a3b8', fill: false, tension: 0.3 },
+                  { label: '担当不在', data: hFz, borderColor: '#f87171', backgroundColor: '#f87171', fill: false, tension: 0.3 },
+                  { label: '担当コネクト', data: hConnect, borderColor: '#fbbf24', backgroundColor: '#fbbf24', fill: false, tension: 0.3, borderWidth: 3 },
+                  { label: '★アポ', data: hApo, borderColor: '#14b8a6', backgroundColor: '#14b8a6', fill: false, tension: 0.3, borderWidth: 3 }
+              ]
+          },
+          options: { maintainAspectRatio: false }
+      });
 
       // Daily Trend Chart（日別集計はセッション単位でも計算できるため、絞り込み中も表示する）
       const ctxDaily = document.getElementById('sa-daily-chart').getContext('2d');
@@ -2313,57 +2340,49 @@
           }
       });
 
-      // 時間帯別 転換率の推移（受付突破率・アポ率）※絞り込み中は表示できない
-      document.getElementById('sa-ratehourly-filter-note').style.display = isFiltered ? 'block' : 'none';
-      document.getElementById('sa-ratehourly-chart-wrap').style.display = isFiltered ? 'none' : 'block';
+      // 時間帯別 転換率の推移（受付突破率・アポ率）
       if (rateHourlyChartInstance) { rateHourlyChartInstance.destroy(); rateHourlyChartInstance = null; }
-      if (!isFiltered) {
-          const ctxRateHourly = document.getElementById('sa-rate-hourly-chart').getContext('2d');
-          const hLabels = ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'];
-          const hBreakthroughRate = hUk.map((v, i) => {
-              const tot = hUk[i] + hFu[i] + hFz[i] + hTbk[i] + hApo[i];
-              return tot > 0 ? +(((hTbk[i] + hApo[i]) / tot) * 100).toFixed(1) : 0;
-          });
-          const hApoRate = hUk.map((v, i) => {
-              const tot = hUk[i] + hFu[i] + hFz[i] + hTbk[i] + hApo[i];
-              return tot > 0 ? +((hApo[i] / tot) * 100).toFixed(1) : 0;
-          });
-          rateHourlyChartInstance = new Chart(ctxRateHourly, {
-              type: 'line',
-              data: {
-                  labels: hLabels,
-                  datasets: [
-                      { label: '受付突破率(%)', data: hBreakthroughRate, borderColor: '#fbbf24', backgroundColor: '#fbbf24', fill: false, tension: 0.3, borderWidth: 2 },
-                      { label: 'アポ率(%)', data: hApoRate, borderColor: '#14b8a6', backgroundColor: '#14b8a6', fill: false, tension: 0.3, borderWidth: 3 }
-                  ]
-              },
-              options: { maintainAspectRatio: false, scales: { y: { ticks: { callback: v => v + '%' } } } }
-          });
-      }
+      const ctxRateHourly = document.getElementById('sa-rate-hourly-chart').getContext('2d');
+      const hLabels = ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'];
+      const hBreakthroughRate = hUk.map((v, i) => {
+          const tot = hUk[i] + hFu[i] + hFz[i] + hTbk[i] + hApo[i];
+          return tot > 0 ? +(((hTbk[i] + hApo[i]) / tot) * 100).toFixed(1) : 0;
+      });
+      const hApoRate = hUk.map((v, i) => {
+          const tot = hUk[i] + hFu[i] + hFz[i] + hTbk[i] + hApo[i];
+          return tot > 0 ? +((hApo[i] / tot) * 100).toFixed(1) : 0;
+      });
+      rateHourlyChartInstance = new Chart(ctxRateHourly, {
+          type: 'line',
+          data: {
+              labels: hLabels,
+              datasets: [
+                  { label: '受付突破率(%)', data: hBreakthroughRate, borderColor: '#fbbf24', backgroundColor: '#fbbf24', fill: false, tension: 0.3, borderWidth: 2 },
+                  { label: 'アポ率(%)', data: hApoRate, borderColor: '#14b8a6', backgroundColor: '#14b8a6', fill: false, tension: 0.3, borderWidth: 3 }
+              ]
+          },
+          options: { maintainAspectRatio: false, scales: { y: { ticks: { callback: v => v + '%' } } } }
+      });
 
-      // 時間帯別 ステージ離脱の内訳 ※絞り込み中は表示できない
-      document.getElementById('sa-substephourly-filter-note').style.display = isFiltered ? 'block' : 'none';
-      document.getElementById('sa-substephourly-chart-wrap').style.display = isFiltered ? 'none' : 'block';
+      // 時間帯別 ステージ離脱の内訳
       if (substepHourlyChartInstance) { substepHourlyChartInstance.destroy(); substepHourlyChartInstance = null; }
-      if (!isFiltered) {
-          const ctxSubstepHourly = document.getElementById('sa-substep-hourly-chart').getContext('2d');
-          const hLabels2 = ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'];
-          substepHourlyChartInstance = new Chart(ctxSubstepHourly, {
-              type: 'bar',
-              data: {
-                  labels: hLabels2,
-                  datasets: [
-                      { label: '目的', data: hMokuteki, backgroundColor: '#60a5fa' },
-                      { label: 'メリット(機能)', data: hMeritKinou, backgroundColor: '#34d399' },
-                      { label: 'メリット(ベネ)', data: hMeritBene, backgroundColor: '#a78bfa' },
-                      { label: '断りづらい', data: hKotowarizurai, backgroundColor: '#fb923c' },
-                      { label: 'クロージング', data: hClosing, backgroundColor: '#f87171' },
-                      { label: 'カウンター', data: hCounter, backgroundColor: '#facc15' }
-                  ]
-              },
-              options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
-          });
-      }
+      const ctxSubstepHourly = document.getElementById('sa-substep-hourly-chart').getContext('2d');
+      const hLabels2 = ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18', '18-'];
+      substepHourlyChartInstance = new Chart(ctxSubstepHourly, {
+          type: 'bar',
+          data: {
+              labels: hLabels2,
+              datasets: [
+                  { label: '目的', data: hMokuteki, backgroundColor: '#60a5fa' },
+                  { label: 'メリット(機能)', data: hMeritKinou, backgroundColor: '#34d399' },
+                  { label: 'メリット(ベネ)', data: hMeritBene, backgroundColor: '#a78bfa' },
+                  { label: '断りづらい', data: hKotowarizurai, backgroundColor: '#fb923c' },
+                  { label: 'クロージング', data: hClosing, backgroundColor: '#f87171' },
+                  { label: 'カウンター', data: hCounter, backgroundColor: '#facc15' }
+              ]
+          },
+          options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+      });
 
       if (document.getElementById('sa-compare-toggle').checked) renderStatusComparison();
   }
@@ -3080,6 +3099,8 @@
 
             const sess = ensureSession(state, currentList, currentTalk);
             sess.timerSeconds = (sess.timerSeconds || 0) + elapsed;
+            if (!sess.hourly.time) sess.hourly.time = Array(10).fill(0);
+            sess.hourly.time[hIdx] += elapsed;
 
             startTime += elapsed * 1000;
         }
@@ -3102,6 +3123,18 @@
 
   // --- カウント処理 ---
   function getHourColIdx() { const h = new Date().getHours(); return (h >= 9 && h <= 17) ? h - 9 : 9; }
+  // カウント項目 id の増減を、時間帯別内訳 hourly の c 列に反映する（商材単位の合計とリスト×トーク別のセッションの両方で使う）
+  function applyHourlyDelta(hourly, id, c, delta) {
+    const add = key => {
+      if (!hourly[key]) hourly[key] = Array(10).fill(0);
+      hourly[key][c] = Math.max(0, (hourly[key][c] || 0) + delta);
+    };
+    if (id === 0) add('uketsuke');
+    else if (id === 1) add('futsu');
+    else if (id === 2) add('fuzai');
+    else if (id >= 3 && id <= 8) { add('tantoBK'); add(SUBSTEP_HOURLY_KEYS[id]); }
+    else if (id === 9) add('apo');
+  }
   function changeValue(id, delta) {
     if (currentProduct === ALL_PRODUCTS_KEY) return; 
     let state = appData[currentUser][currentDateStr][currentProduct];
@@ -3116,19 +3149,11 @@
     let newVal = Math.max(0, oldVal + actualDelta); 
     if (oldVal === newVal) return;
     state.counts[id] = newVal; const c = getHourColIdx();
-    if(id===0) state.hourly.uketsuke[c] = Math.max(0, state.hourly.uketsuke[c]+actualDelta);
-    else if(id===1) state.hourly.futsu[c] = Math.max(0, state.hourly.futsu[c]+actualDelta);
-    else if(id===2) state.hourly.fuzai[c] = Math.max(0, state.hourly.fuzai[c]+actualDelta);
-    else if(id>=3 && id<=8) {
-      state.hourly.tantoBK[c] = Math.max(0, state.hourly.tantoBK[c]+actualDelta);
-      const key = SUBSTEP_HOURLY_KEYS[id];
-      if (!state.hourly[key]) state.hourly[key] = Array(10).fill(0);
-      state.hourly[key][c] = Math.max(0, (state.hourly[key][c]||0)+actualDelta);
-    }
-    else if(id===9) state.hourly.apo[c] = Math.max(0, state.hourly.apo[c]+actualDelta);
+    applyHourlyDelta(state.hourly, id, c, actualDelta);
 
     const sess = ensureSession(state, currentList, currentTalk);
     sess.counts[id] = Math.max(0, (sess.counts[id]||0) + actualDelta);
+    applyHourlyDelta(sess.hourly, id, c, actualDelta);
 
     saveData(); render();
   }
