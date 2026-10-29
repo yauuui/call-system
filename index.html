@@ -517,6 +517,20 @@
     .cb-alert span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-widget.cb-alerting .mini-pace { display: none !important; }
     .cb-alert button { border: 1px solid #d97706; background: #fff; color: #92400e; border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    /* 弱点診断 */
+    .wd-summary { font-size: 13px; line-height: 1.7; margin-bottom: 12px; }
+    .wd-summary strong { color: #b91c1c; }
+    .wd-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: normal; }
+    .wd-table th { background: #f8fafc; color: var(--text-muted); font-size: 11px; font-weight: 700; text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); border-right: none; }
+    .wd-table td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; text-align: left; border-right: none; }
+    .wd-bar { position: relative; height: 8px; background: #e2e8f0; border-radius: 4px; min-width: 120px; }
+    .wd-bar .me { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--accent); }
+    .wd-bar .team { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #1e293b; }
+    .wd-diff { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .wd-diff.weak { color: #b91c1c; }
+    .wd-diff.strong { color: #047857; }
+    .wd-link { border: 1px solid #99f6e4; background: #f0fdfa; color: var(--accent-hover); border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .wd-note { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -1190,6 +1204,14 @@
 
             </div>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span style="display:flex; align-items:center; gap:8px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-target"></use></svg> 弱点診断（チームの中央値との比較）</span>
+            <span style="font-size:11px; font-weight:600; color:var(--text-muted);">上のフィルター（アカウント・商材・リスト・トーク・期間）で診断します</span>
+          </div>
+          <div class="card-body" id="weakness-diagnosis"></div>
         </div>
 
         <div class="card">
@@ -2766,6 +2788,86 @@
       });
 
       if (document.getElementById('sa-compare-toggle').checked) renderStatusComparison();
+      renderWeaknessDiagnosis(uFilter, pFilter, lFilter, tFilter, sD, eD);
+  }
+
+  // --- 弱点診断（AIなし）：各段階の通過率を、同じ条件のチームメンバーの中央値と比べる ---
+  // 段階ごとに「どのナレッジを見直すとよいか」を対応づける（script: スクリプト, knowledge: 知識, counter: カウンター）
+  const WD_STAGES = [
+    { key: 'reception', label: '受付突破（総架電→担当）', kb: 'script', kbLabel: 'スクリプト（受付の切り抜け方）' },
+    { key: 's0', label: '目的 → メリット(機能)', kb: 'script', kbLabel: 'スクリプト（目的の伝え方）' },
+    { key: 's1', label: 'メリット(機能) → メリット(ベネ)', kb: 'knowledge', kbLabel: '知識（商材の機能）' },
+    { key: 's2', label: 'メリット(ベネ) → 断りづらい', kb: 'knowledge', kbLabel: '知識（導入効果・事例）' },
+    { key: 's3', label: '断りづらい → クロージング', kb: 'counter', kbLabel: 'カウンター（切り返し）' },
+    { key: 's4', label: 'クロージング → カウンター', kb: 'script', kbLabel: 'スクリプト（クロージング）' },
+    { key: 's5', label: 'カウンター → アポ', kb: 'counter', kbLabel: 'カウンター（切り返し）' }
+  ];
+  const WD_MIN_REACH = 10;
+
+  // 1人分の段階別「到達数・通過率」
+  function computeStageRates(user, pFilter, lFilter, tFilter, sD, eD) {
+    const d = computeStatusAnalysisData(user, pFilter, lFilter, tFilter, sD, eD, false);
+    const out = { reception: { reach: d.totalCalls, rate: d.totalCalls > 0 ? d.totalConnects / d.totalCalls * 100 : null } };
+    d.stageDetails.forEach((st, i) => { out['s' + i] = { reach: st.reach, rate: st.reach > 0 ? st.passed / st.reach * 100 : null }; });
+    return out;
+  }
+  function median(arr) {
+    if (!arr.length) return null;
+    const a = [...arr].sort((x, y) => x - y), m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+
+  function renderWeaknessDiagnosis(uFilter, pFilter, lFilter, tFilter, sD, eD) {
+    const box = document.getElementById('weakness-diagnosis');
+    if (!box) return;
+    if (uFilter === '__ALL_USERS__') {
+      box.innerHTML = '<div class="wd-note" style="margin:0;">アカウントを1人選ぶと、その人の各段階の通過率をチームの中央値と比べて、弱点と強みを表示します。</div>';
+      return;
+    }
+    const me = computeStageRates(uFilter, pFilter, lFilter, tFilter, sD, eD);
+    const others = usersList.filter(u => u !== uFilter).map(u => computeStageRates(u, pFilter, lFilter, tFilter, sD, eD));
+    const rows = WD_STAGES.map(st => {
+      const mine = me[st.key];
+      const teamRates = others.filter(o => o[st.key].reach >= WD_MIN_REACH).map(o => o[st.key].rate);
+      const teamMed = teamRates.length >= 2 ? median(teamRates) : null;
+      const usable = mine.reach >= WD_MIN_REACH && teamMed !== null;
+      return { ...st, mine, teamMed, teamN: teamRates.length, diff: usable ? mine.rate - teamMed : null };
+    });
+    const judged = rows.filter(r => r.diff !== null);
+    const weak = judged.filter(r => r.diff <= -5).sort((a, b) => a.diff - b.diff);
+    const strong = judged.filter(r => r.diff >= 5).sort((a, b) => b.diff - a.diff);
+
+    let summary;
+    if (!judged.length) {
+      summary = `件数が足りないため診断できません（本人の到達数が${WD_MIN_REACH}件以上、かつ同じ条件で${WD_MIN_REACH}件以上のメンバーが2人以上いる段階のみ比べます）。期間を広げてみてください。`;
+    } else {
+      summary = weak.length
+        ? `いちばんの伸びしろは <strong>${weak[0].label}</strong> です（あなた ${weak[0].mine.rate.toFixed(1)}% ／ チーム中央値 ${weak[0].teamMed.toFixed(1)}%、<strong>${Math.abs(weak[0].diff).toFixed(1)}pt 低い</strong>）。`
+        : 'チームの中央値より大きく（5pt以上）低い段階はありません。';
+      if (strong.length) summary += `<br>強みは <span style="color:#047857; font-weight:700;">${strong[0].label}</span>（中央値より ${strong[0].diff.toFixed(1)}pt 高い）です。`;
+    }
+    const fmtRate = v => v === null ? '-' : v.toFixed(1) + '%';
+    box.innerHTML = `<div class="wd-summary">${summary}</div>
+      <div class="table-container"><table class="wd-table">
+        <thead><tr><th>段階</th><th>あなた（到達数）</th><th>チーム中央値</th><th style="width:28%;">比較（｜＝チーム中央値）</th><th>差</th><th></th></tr></thead>
+        <tbody>${rows.map(r => {
+          const cls = r.diff === null ? '' : (r.diff <= -5 ? 'weak' : (r.diff >= 5 ? 'strong' : ''));
+          const diffText = r.diff === null ? (r.mine.reach < WD_MIN_REACH ? '件数不足' : 'チームの件数不足') : `${r.diff > 0 ? '+' : (r.diff < 0 ? '−' : '±')}${Math.abs(r.diff).toFixed(1)}pt`;
+          const bar = r.mine.rate === null ? '' : `<div class="wd-bar"><div class="me" style="width:${Math.min(100, r.mine.rate)}%;"></div>${r.teamMed !== null ? `<div class="team" style="left:${Math.min(100, r.teamMed)}%;"></div>` : ''}</div>`;
+          const link = cls === 'weak' ? `<button class="wd-link" onclick="openKnowledgeFor('${r.kb}')" title="ナレッジベースの${escapeHTML(r.kbLabel)}を開く">${escapeHTML(r.kbLabel)}を見直す</button>` : '';
+          return `<tr><td style="font-weight:600;">${r.label}</td><td>${fmtRate(r.mine.rate)}（${r.mine.reach}）</td><td>${fmtRate(r.teamMed)}${r.teamN ? `（${r.teamN}人）` : ''}</td><td>${bar}</td><td class="wd-diff ${cls}">${diffText}</td><td>${link}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>
+      <div class="wd-note">※チーム中央値は、同じ条件（商材・リスト・トーク・期間）で到達数${WD_MIN_REACH}件以上のメンバー（本人を除く）の中央値です。5pt以上の差を弱点／強みとしています。</div>`;
+  }
+
+  // 弱点診断から、ナレッジベースの該当カテゴリを開く（商材が選ばれていればその商材）
+  function openKnowledgeFor(cat) {
+    const p = document.getElementById('sa-product-select').value;
+    switchTab('script');
+    if (p !== '__ALL_PRODUCTS__' && productsList.includes(p)) document.getElementById('script-product-select').value = p;
+    switchScriptScope('team');
+    switchScriptCat(cat);
   }
 
   // --- ステータス分析：比較モード（2つの条件を横に並べて見比べる） ---
