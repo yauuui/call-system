@@ -793,6 +793,35 @@
     [data-theme="dark"] [style*="color:#1d4ed8"] { color: #93c5fd !important; }
     [data-theme="dark"] [style*="color:#7e22ce"] { color: #d8b4fe !important; }
     [data-theme="dark"] #script-status-banner { filter: brightness(0.85); }
+
+    /* 使い方マニュアル */
+    .man-search { width: 280px; max-width: 50%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--card-bg); color: var(--text-main); }
+    .manual { color: var(--text-main); font-size: 14px; line-height: 1.8; max-width: 920px; }
+    .manual .man-lead { margin: 0 0 14px; }
+    .man-toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; margin-bottom: 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--main-bg); }
+    .man-toc button { text-align: left; background: none; border: none; padding: 4px 6px; border-radius: 4px; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .man-toc button:hover { background: var(--card-bg); text-decoration: underline; }
+    .man-sec { scroll-margin-top: 12px; }
+    .manual h2 { font-size: 18px; margin: 28px 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--accent-bright); }
+    .manual h3 { font-size: 15px; margin: 18px 0 6px; }
+    .manual p { margin: 6px 0; }
+    .manual ol, .manual ul { margin: 6px 0; padding-left: 1.6em; }
+    .manual li { margin: 2px 0; }
+    .manual kbd { display: inline-block; padding: 0 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; background: var(--main-bg); font-family: inherit; font-size: 12px; line-height: 1.6; }
+    .man-table-wrap { overflow-x: auto; margin: 8px 0; }
+    .man-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    .man-table th, .man-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+    .man-table th { background: var(--main-bg); font-weight: 700; white-space: nowrap; }
+    .man-empty { color: var(--text-muted); }
+    @media (max-width: 768px) {
+      #page-manual .card-header { flex-direction: column; align-items: stretch; gap: 8px; }
+      .man-search { width: 100%; max-width: none; }
+      .man-toc { grid-template-columns: 1fr; }
+      /* タブが8つになるため、「使い方」は細めにして他のタブの文字を省略させない */
+      .nav-item { padding-left: 0; padding-right: 0; }
+      .nav-item::after { letter-spacing: -0.3px; }
+      #nav-manual { flex: 0 0 40px; }
+    }
   </style>
 </head>
 <body>
@@ -831,6 +860,7 @@
   <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></symbol>
   <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4" /><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" /></symbol>
   <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></symbol>
+  <symbol id="icon-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 9a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17h.01" /></symbol>
 </svg>
 
 <div id="loading-overlay">
@@ -889,6 +919,10 @@
       <li class="nav-item" id="nav-ranking" data-short="ランキング" onclick="switchTab('ranking')">
         <span class="nav-icon"><svg class="icon"><use href="#icon-trophy"></use></svg></span>
         <span>チームランキング</span>
+      </li>
+      <li class="nav-item" id="nav-manual" data-short="使い方" onclick="switchTab('manual')">
+        <span class="nav-icon"><svg class="icon"><use href="#icon-help"></use></svg></span>
+        <span>使い方</span>
       </li>
     </ul>
   </aside>
@@ -1609,6 +1643,265 @@
       </div>
 
       <!-- =================【タブ6: チームランキング画面】================= -->
+      <!-- 使い方マニュアル（本文は静的なHTML。機能を変えたらここも直す） -->
+      <div id="page-manual" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
+        <div class="card">
+          <div class="card-header">
+            <span>CALL APP 使い方マニュアル</span>
+            <input type="search" id="man-search" class="man-search" placeholder="マニュアル内を検索（例：取り消し）" oninput="filterManual(this.value)" aria-label="マニュアル内を検索">
+          </div>
+          <div class="card-body manual" id="manual-body">
+          <p class="man-lead">架電の結果をボタン1つで記録し、受付突破率やアポ率などを自動で集計するチーム向けのツールです。毎日の記録の付け方から分析画面の見方まで、順に説明します。</p>
+          <nav class="man-toc" id="man-toc">
+            <button type="button" onclick="scrollToManual('man-s1')">1. はじめに：ログインと画面の見方</button>
+            <button type="button" onclick="scrollToManual('man-s2')">2. 毎日の基本操作：架電を記録する</button>
+            <button type="button" onclick="scrollToManual('man-s3')">3. キーボードショートカットと取り消し</button>
+            <button type="button" onclick="scrollToManual('man-s4')">4. 小窓（別ウィンドウ）で使う</button>
+            <button type="button" onclick="scrollToManual('man-s5')">5. 目標・ペース予測・スプリント</button>
+            <button type="button" onclick="scrollToManual('man-s6')">6. 架電中の助け：切り返し検索と再架電リマインダー</button>
+            <button type="button" onclick="scrollToManual('man-s7')">7. 1日の終わり：日報・振り返り・CSV出力</button>
+            <button type="button" onclick="scrollToManual('man-s8')">8. 分析画面の見方</button>
+            <button type="button" onclick="scrollToManual('man-s9')">9. チームの機能：アポ演出・拍手・大画面モード・成長とバッジ</button>
+            <button type="button" onclick="scrollToManual('man-s10')">10. 設定と環境</button>
+            <button type="button" onclick="scrollToManual('man-s11')">11. よくある質問・困ったとき</button>
+          </nav>
+          <section class="man-sec" id="man-s1">
+          <h2>1. はじめに：ログインと画面の見方</h2>
+          <h3>ログイン</h3>
+          <ol><li>アプリを開くと、ログイン画面が表示されます。</li><li>一覧から自分の名前を選び、「システムを利用開始する」を押します。</li><li>最初は「全商材まとめ」の表示で開きます。このままではカウントできないので、まず「商材」で今日かける商材を選んでください。</li></ol>
+          <p>パスワードはありません。他の人の名前でログインしないよう注意してください。</p>
+          <h3>コールカウント画面</h3>
+          <p>ログインすると、コールカウント画面が開きます。一般的なノートPC（1366×768）なら、スクロールせずに入力ボタンがすべて見える配置です。画面は上から次の順に並んでいます。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>場所</th><th>表示されているもの</th></tr>
+          <tr><td>1行目</td><td>日付・商材・リスト・トークの選択欄と、「報告」「日報」「振返り」「CSV」のボタン</td></tr>
+          <tr><td>状況帯</td><td>タイマー、受付突破率・受注率・担当受注率・架電数/h、アポ進捗、ペース予測</td></tr>
+          <tr><td>モチベーション帯</td><td>次のアポまでのゲージ、自己ベスト、チームの温度計（チーム総アポ）</td></tr>
+          <tr><td>架電入力パネル</td><td>10個のカウントボタン、コーチ欄（一言と切り返し検索）</td></tr>
+          <tr><td>画面の下のほう</td><td>あなたの成長（先週との比較・バッジ）、目標の編集、時間帯ごとの分析、今日の架電履歴、メンバーランキング</td></tr>
+          </table></div>
+          <h3>左のメニュー</h3>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>メニュー</th><th>使う場面</th></tr>
+          <tr><td>コールカウント</td><td>架電を記録する（いちばん使う画面）</td></tr>
+          <tr><td>ナレッジベース</td><td>トークスクリプト・切り返し・商材知識を見る、書く</td></tr>
+          <tr><td>KPI / KGI</td><td>月のシフトと予想を入れる</td></tr>
+          <tr><td>数値分析レポート</td><td>日・週・月ごとの数値を表で見る</td></tr>
+          <tr><td>ステータス分析</td><td>どの段階で止まっているかをグラフで見る</td></tr>
+          <tr><td>リスト/トーク分析</td><td>リストやトークごとの成果を比べる</td></tr>
+          <tr><td>チームランキング</td><td>今週・今月のランキングを見る</td></tr>
+          <tr><td>使い方</td><td>このマニュアル</td></tr>
+          </table></div>
+          <h3>トップバーのボタン</h3>
+          <p>右上には、左から順に次のボタンがあります。</p>
+          <ul><li>小窓（別ウィンドウで開く）</li><li>ダークモードの切り替え（月のアイコン）</li><li>大画面モード（グラフのアイコン）</li><li>再架電（今日の予定の数が赤い丸で出ます）</li><li>リスト/トーク（自分用のリストとトークの管理）</li><li>ログアウト</li><li>設定（管理者のみ表示）</li></ul>
+          </section>
+          <section class="man-sec" id="man-s2">
+          <h2>2. 毎日の基本操作：架電を記録する</h2>
+          <h3>始業時の準備</h3>
+          <ol><li>「日付」が今日になっていることを確かめます。</li><li>「商材」で、かける商材を選びます。</li><li>使うなら「リスト」と「トーク」も選びます（後から分析で比べられます。未設定のままでも記録できます）。</li><li>タイマーの再生ボタンを押して、稼働時間の計測を始めます。休憩中は一時停止ボタンを押します。</li></ol>
+          <p>架電数/h やペース予測は、このタイマーの時間をもとに計算します。タイマーを止め忘れると数値がずれるので注意してください。</p>
+          <h3>1件かけたら、ボタンを1回押す</h3>
+          <p>通話が終わったら、<strong>その通話がどこまで進んで終わったか</strong>を1つだけ押します。架電数は、10個のボタンの合計です。押し間違えたときは、そのボタンの「−」で1つ戻せます。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>キー</th><th>ボタン</th><th>押すとき</th></tr>
+          <tr><td>1</td><td>受付BK</td><td>受付で断られた</td></tr>
+          <tr><td>2</td><td>不通</td><td>つながらなかった（留守電・話し中など）</td></tr>
+          <tr><td>3</td><td>担当不在</td><td>担当者が不在だった</td></tr>
+          <tr><td>4</td><td>目的</td><td>担当と話したが、目的を伝えた段階で終わった</td></tr>
+          <tr><td>5</td><td>メリット(機能)</td><td>機能のメリットを伝えた段階で終わった</td></tr>
+          <tr><td>6</td><td>メリット(ベネ)</td><td>導入後の効果（ベネフィット）を伝えた段階で終わった</td></tr>
+          <tr><td>7</td><td>断りづらい</td><td>断りづらいトークまで進んで終わった</td></tr>
+          <tr><td>8</td><td>クロージング</td><td>アポの打診まで進んで断られた</td></tr>
+          <tr><td>9</td><td>カウンター</td><td>切り返しまで粘ったが断られた</td></tr>
+          <tr><td>0</td><td>★アポ獲得</td><td>アポが取れた</td></tr>
+          </table></div>
+          <p>パネルの1段目（キー1〜3）は担当につながる前に終わったもの、2段目（キー4〜0）は担当と話した後にどこで終わったかです。2段目は左から右へ会話が進む順に並んでいます。</p>
+          <h3>記録はすぐに保存されます</h3>
+          <p>押した内容は、その場でクラウドに保存されます（接続できないときは端末に保存されます）。保存ボタンはありません。</p>
+          <p>押した記録は1件ずつ「今日の架電履歴」（画面の下のほう）に残ります。いつ・どのボタンを・どのリストとトークで押したかを確認できます。</p>
+          <h3>途中で商材・リスト・トークを変える</h3>
+          <p>同じ日の中で、何度でも切り替えられます。切り替えた後に押した分は、新しい商材・リスト・トークに記録されます。それまでの記録は消えません。</p>
+          </section>
+          <section class="man-sec" id="man-s3">
+          <h2>3. キーボードショートカットと取り消し</h2>
+          <p>マウスを使わずに、キーボードだけで記録できます。パネルの各ボタンの左上に、対応するキーが表示されています。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>操作</th><th>キー</th></tr>
+          <tr><td>＋1</td><td><kbd>1</kbd>〜<kbd>9</kbd>、<kbd>0</kbd>（テンキーも使えます）</td></tr>
+          <tr><td>−1</td><td><kbd>Shift</kbd>＋数字</td></tr>
+          <tr><td>直前の操作を取り消す</td><td><kbd>Ctrl</kbd>＋<kbd>Z</kbd>（Macは <kbd>⌘</kbd>＋<kbd>Z</kbd>）</td></tr>
+          </table></div>
+          <h3>取り消し</h3>
+          <p>ボタンを押すと、パネルの見出しに取り消しバーが少しの間表示されます。そこを押すか <kbd>Ctrl</kbd>＋<kbd>Z</kbd> で、直前の操作を取り消せます。続けて押すと、さらに1つ前の操作も取り消せます。</p>
+          <p>取り消しは、記録したときの時間帯・リスト・トークから正しく戻します。その後でリストやトークを切り替えていても、元の場所から引かれます。</p>
+          <h3>ショートカットが効かないとき</h3>
+          <p>次のときは、誤入力を防ぐために反応しません。</p>
+          <ul><li>検索欄やメモ欄など、入力欄に文字を入れているとき（入力欄の外をクリックすると効きます）</li><li>画面に入力画面（モーダル）が開いているとき</li><li>コールカウント以外の画面を表示しているとき</li><li>商材が「全商材まとめ」のとき</li></ul>
+          <p>小窓（次の章）でも同じキーが使えます。</p>
+          </section>
+          <section class="man-sec" id="man-s4">
+          <h2>4. 小窓（別ウィンドウ）で使う</h2>
+          <p>CRMやリストを開きながら記録したいときは、小窓が便利です。タイマーとカウントボタンだけの小さなウィンドウが、他の画面の上に浮かびます。</p>
+          <h3>開き方と閉じ方</h3>
+          <ol><li>トップバーいちばん左のボタン（矢印が内側を向いたアイコン）を押します。</li><li>小窓が開きます。本体の画面はそのまま開いておいてください。</li><li>終わったら、小窓右上の×で閉じます。</li></ol>
+          <p>Chrome と Edge では、小窓が常にいちばん手前に表示されます。それ以外のブラウザでは普通の別ウィンドウとして開きます（ポップアップの許可が必要なことがあります）。</p>
+          <h3>小窓でできること</h3>
+          <ul><li>タイマーの開始・停止・クリア</li><li>10個のボタンの＋／−（キーボードショートカットも使えます）</li><li>商材・リスト・トークの切り替え（本体と連動します）</li><li>架電数/h・受付突破率・アポ率と、ペース予測の表示</li></ul>
+          <p>上部のタブで、表示を切り替えられます。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>タブ</th><th>内容</th></tr>
+          <tr><td>カウント</td><td>カウントボタン</td></tr>
+          <tr><td>メモ</td><td>自由に書けるメモ。担当者・日付・商材ごとに自動で保存されます</td></tr>
+          <tr><td>切り返し</td><td>切り返しトークの検索</td></tr>
+          <tr><td>再架電</td><td>再架電の予定の確認と登録</td></tr>
+          </table></div>
+          <p>小窓で押した内容は、本体にもすぐ反映されます。商材が「全商材まとめ」のときは、小窓でもカウントできません。</p>
+          </section>
+          <section class="man-sec" id="man-s5">
+          <h2>5. 目標・ペース予測・スプリント</h2>
+          <h3>今日の目標を決める</h3>
+          <ol><li>商材を選んだ状態で、状況帯の「個人のアポ進捗」を押します。</li><li>画面の下のほうにある目標の編集欄が開きます。</li><li>「アポ目標」「架電数/hの目標」と、文章での目標（定性目標）を入れます。</li></ol>
+          <p>目標はその日の全商材に共通で保存されます。入れない場合は、アポ3件・20件/h として扱います。</p>
+          <h3>ペース予測を見る</h3>
+          <p>状況帯の右端に、「あと1件｜必要 3.6件/h」のように表示されます。</p>
+          <ul><li>「あと◯件」：アポ目標までの残り件数</li><li>「必要 ◯件/h」：終業までに目標に届くために必要な架電のペース</li><li>緑は「今のペースで足りる」、赤は「足りない」という意味です</li></ul>
+          <p>終業時刻は KPI / KGI 画面のシフトを使い、シフトがなければ 18:00 とします。1アポに何件かかるかは、今日の実績（まだなければ過去30日の同じ商材の実績）から計算します。</p>
+          <h3>モチベーション帯</h3>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>表示</th><th>意味</th></tr>
+          <tr><td>次のアポまで</td><td>1アポあたりの架電数を1周とするゲージです。断られた架電でもゲージが進みます</td></tr>
+          <tr><td>自己ベスト</td><td>1日の架電数の過去最高との比較です。目標を達成した日が続くと、連続日数も表示します</td></tr>
+          <tr><td>チームの温度計</td><td>今日のチーム総アポと、チーム目標（KPI / KGI のシフトの予想の合計）です。届いた拍手の数も表示します</td></tr>
+          </table></div>
+          <h3>スプリント（短い集中タイム）</h3>
+          <p>「この25分で20件かける」ように、短い時間を区切って集中するための機能です。</p>
+          <ol><li>ペース予測の横の「スプリント」を押します。</li><li>時間（15分・25分・30分）と、目標の架電数を選んで始めます。</li><li>終わると、結果と前回のスプリントとの比較が通知されます。</li></ol>
+          <p>スプリント中の架電は、全商材を合わせて数えます。途中で商材を切り替えても途切れません。</p>
+          </section>
+          <section class="man-sec" id="man-s6">
+          <h2>6. 架電中の助け：切り返し検索と再架電リマインダー</h2>
+          <h3>切り返しトークを検索する</h3>
+          <p>通話中に断られたとき、その場で切り返しを探せます。</p>
+          <ol><li>架電入力パネルのコーチ欄にある検索欄に、断り文句を入れます（例：忙しい、間に合っている）。</li><li>ナレッジベースの「カウンター」（チーム共有と個人用）から、断り文句・本文・解説に合うものが表示されます。</li><li>実際に使ったら「使った」を押します。使った回数が多い順に上へ並ぶようになります。</li></ol>
+          <p>「断りづらい」か「カウンター」を押したときは、検索しなくてもよく使う切り返しがコーチ欄に表示されます。小窓では「切り返し」タブから検索できます。</p>
+          <p>検索できるのは、ナレッジベースに登録されている切り返しだけです。うまくいった切り返しは、ナレッジベースに追加しておきましょう（「設定と環境」の章を参照）。</p>
+          <h3>再架電を登録する</h3>
+          <p>「16時以降にかけ直して」と言われたときなどに使います。</p>
+          <ol><li>トップバーの「再架電」を押します（小窓では「再架電」タブ）。</li><li>会社名、かけ直す日時、メモ（担当者名など）を入れて登録します。</li><li>そのとき選んでいた商材・リスト・トークも一緒に記録されます。</li></ol>
+          <p>初めて登録するとき、ブラウザから通知の許可を求められます。許可すると、別のアプリを使っていても通知が届きます。</p>
+          <h3>時間になったら</h3>
+          <p>本体・小窓・ブラウザの通知でお知らせします。お知らせから次の操作ができます。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>ボタン</th><th>動き</th></tr>
+          <tr><td>完了</td><td>かけ終わった予定を済みにする</td></tr>
+          <tr><td>10分後</td><td>10分後にもう一度知らせる</td></tr>
+          </table></div>
+          <p>トップバーの「再架電」の赤い丸は、今日の予定と、時間を過ぎたままの予定の数です。再架電の予定は自分のアカウントにだけ表示され、他のメンバーには見えません。</p>
+          </section>
+          <section class="man-sec" id="man-s7">
+          <h2>7. 1日の終わり：日報・振り返り・CSV出力</h2>
+          <h3>タイマーを止める</h3>
+          <p>終業したら、まずタイマーを一時停止します。止めた時点までの稼働時間が記録されます。</p>
+          <h3>日報を作る</h3>
+          <p>1行目の「日報」を押すと、今日のハイライトと日報の文章が自動で作られます。終業時刻を過ぎると、コーチ欄にも「今日のハイライトを見る」が出ます。</p>
+          <p>ハイライトには、今日の結果・各率・最も架電した時間帯・一番当たったトークとリスト・自己ベスト・明日の伸びしろが表示されます。下の文章は編集できます。「コピーする」を押して、そのまま Slack に貼り付けてください。</p>
+          <h3>その他のボタン</h3>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>ボタン</th><th>動き</th></tr>
+          <tr><td>報告</td><td>今月のチームとメンバーの進捗（実績／目標）を、Slack に貼れる進捗報告の形で作ります</td></tr>
+          <tr><td>振返り</td><td>表示中の数値（稼働時間・総架電・各ボタンの件数など）を、数字だけ縦に並べてコピーします。スプレッドシートへの貼り付け用です</td></tr>
+          <tr><td>CSV</td><td>全員・全期間の記録を CSV ファイルで保存します。タイマーが動いている場合は止めてから出力します</td></tr>
+          </table></div>
+          <h3>週の振り返り</h3>
+          <p>コールカウント画面の下のほうにある「あなたの成長」で、今週と先週の自分を比べられます。良くなった指標から先に表示されます。比べる相手は他のメンバーではなく、過去の自分です。</p>
+          </section>
+          <section class="man-sec" id="man-s8">
+          <h2>8. 分析画面の見方</h2>
+          <p>知りたいことから、開く画面を選んでください。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>知りたいこと</th><th>開く画面</th></tr>
+          <tr><td>どの段階で断られているか、自分の弱点はどこか</td><td>ステータス分析</td></tr>
+          <tr><td>どのリストやトークが当たるか</td><td>リスト/トーク分析</td></tr>
+          <tr><td>何曜日の何時にかけるとつながりやすいか</td><td>リスト/トーク分析（ヒートマップ）</td></tr>
+          <tr><td>日・週・月ごとの数値の推移</td><td>数値分析レポート</td></tr>
+          <tr><td>今週・今月の順位</td><td>チームランキング</td></tr>
+          </table></div>
+          <p>どの画面も、上のフィルター（アカウント・商材・リスト・トーク・期間）で対象を絞り込めます。</p>
+          <h3>ステータス分析</h3>
+          <ul><li><strong>コール転換ファネル</strong>：架電からアポまで、各段階に何件届いたかを表示します。段階の間の数値は通過率です</li><li><strong>弱点診断</strong>：各段階の通過率をチームの中央値と比べます。弱点と判定された段階には、ナレッジベースの該当箇所を開くボタンが出ます</li><li><strong>比較モード</strong>：右上のスイッチをオンにすると、「比較A」「比較B」の2つの条件を横に並べて見られます（例：先月と今月、自分とチーム）</li><li><strong>AI分析</strong>：画面のいちばん下にあります。管理者の設定が必要で、未設定のうちは使えません</li></ul>
+          <h3>リスト/トーク分析</h3>
+          <ul><li><strong>集計軸</strong>：リスト別・トーク別・リスト×トーク別から選びます</li><li><strong>比較グラフ</strong>：右上の「指標」で、アポ率や受付突破率などを切り替えられます</li><li><strong>表</strong>：列の見出しをクリックすると並べ替えられます。架電が30件未満のグループは「参考値」と表示されます。件数が少ないと、たまたま良い（悪い）数値になりやすいためです</li><li><strong>曜日×時間帯ヒートマップ</strong>：色が濃いほど数値が高い時間帯です。「指標」で受付突破率・アポ率などを切り替えられます</li><li><strong>トークのA/B判定</strong>：AとBにトークを選ぶと、どちらが良いかを判定します。差が誤差の範囲なら「まだ誤差の範囲です」と表示し、判定できるまでにあと何件必要かの目安も示します</li></ul>
+          <h3>数値分析レポート</h3>
+          <p>期間と「集計単位」（日次・週次・月次）を選ぶと、稼働時間・各ボタンの件数・各率を表で表示します。</p>
+          <h3>チームランキング</h3>
+          <p>今週・今月を切り替えて、「架電数（件/h）」と「アポ獲得数」のランキングを見られます。</p>
+          </section>
+          <section class="man-sec" id="man-s9">
+          <h2>9. チームの機能：アポ演出・拍手・大画面モード・成長とバッジ</h2>
+          <h3>アポを取ったとき</h3>
+          <p>「★アポ獲得」を押すと、自分の画面に短い紙吹雪と「★ アポ獲得！」が表示されます。小窓を使っているときは小窓側に出ます。</p>
+          <p>紙吹雪と効果音は、端末ごとにオン・オフできます。コールカウント画面の下のほうにある設定欄の「アポ獲得時の演出」で切り替えてください。効果音は最初はオフです。</p>
+          <h3>拍手を送る</h3>
+          <p>他のメンバーがアポを取ると、「◯◯ さんがアポを獲得しました」と通知が出ます。通知の「拍手」を押すと、その人に拍手が届きます。</p>
+          <p>自分に届いた拍手は通知で知らされ、モチベーション帯の「チームの温度計」にも数が表示されます。</p>
+          <h3>大画面モード（オフィス掲示用）</h3>
+          <p>トップバーのグラフのアイコンを押すと、モニターに映すための画面に切り替わります。</p>
+          <ul><li>チーム総アポと目標</li><li>メンバーごとの進捗</li><li>アポ速報（アポが取れた順に表示）</li></ul>
+          <p>表示は自動で更新されます。<kbd>Esc</kbd> キーで元の画面に戻ります。</p>
+          <h3>あなたの成長とバッジ</h3>
+          <p>コールカウント画面の下のほうにあります。</p>
+          <ul><li><strong>今週と先週の比較</strong>：1日あたりの架電数や各率が、先週の自分と比べてどう変わったかを表示します</li><li><strong>バッジ</strong>：8種類あります。架電の質・粘り・継続に応じて獲得できます。架電数を増やすだけではもらえないようにしています</li><li><strong>コーチ欄の一言</strong>：始業直後・午前と午後の比較・アポの間隔・終業間際など、そのときの状況に合わせて変わります</li></ul>
+          </section>
+          <section class="man-sec" id="man-s10">
+          <h2>10. 設定と環境</h2>
+          <h3>自分のリストとトークを登録する</h3>
+          <p>トップバーの「リスト/トーク」から登録します。ここで登録したものは自分のアカウントにだけ表示されます。</p>
+          <ul><li><strong>リスト</strong>：架電先のリストの名前（例：製造業新規リスト、担当BKリスト）</li><li><strong>トーク</strong>：トークスクリプトのバージョン。名前に加えて、台本の本文も保存できます</li></ul>
+          <p>トークの本文を書き換えると、変更履歴が自動で残ります。「履歴」ボタンから、過去の版との違いを確認できます。トークを少し変えて試すときは、新しい名前で別のトークとして登録すると、リスト/トーク分析のA/B判定で比べられます。</p>
+          <h3>ナレッジベース</h3>
+          <p>左のメニューの「ナレッジベース」で、商材ごとに次の3つをまとめています。</p>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>タブ</th><th>内容</th></tr>
+          <tr><td>スクリプト</td><td>トークスクリプト</td></tr>
+          <tr><td>カウンター</td><td>断り文句と切り返しトーク、その解説</td></tr>
+          <tr><td>知識</td><td>商材の知識や競合の情報</td></tr>
+          </table></div>
+          <p>「チーム共有」は全員が見られますが、編集できるのは管理者だけです（「修正モード」をオンにしたとき）。「個人用」は自分だけが見られ、自由に編集できます。個人用に入れたカウンターも、切り返し検索の対象になります。</p>
+          <h3>KPI / KGI（シフトと予想）</h3>
+          <p>「対象月」を選び、各メンバーのシフトと予想を入れて「保存する」を押します。「シフトCSVインポート」でまとめて取り込むこともできます。</p>
+          <p>ここに入れた内容は、次の表示に使われます。</p>
+          <ul><li>ペース予測の終業時刻</li><li>チームの温度計と大画面モードのチーム目標</li><li>「報告」で作る進捗報告の目標</li></ul>
+          <h3>管理者の設定</h3>
+          <p>管理者でログインすると、トップバーに「設定」が表示されます。ここでメンバー（アカウント）と商材を追加・削除します。新しいメンバーが入ったら、まず管理者にアカウントを追加してもらってください。</p>
+          <h3>ダークモード</h3>
+          <p>トップバーの月のアイコンで、暗い配色に切り替わります。もう一度押すと戻ります。設定は端末ごとに保存されます。</p>
+          <h3>スマホで使う</h3>
+          <p>スマホでは、メニューが画面の下のタブバーになり、入力パネルが大きなボタンで表示されます。ブラウザのメニューから「ホーム画面に追加」すると、アプリのように起動できます（https で公開されている場合）。小窓と大画面モードは、スマホでは使えません。</p>
+          </section>
+          <section class="man-sec" id="man-s11">
+          <h2>11. よくある質問・困ったとき</h2>
+          <div class="man-table-wrap"><table class="man-table">
+          <tr><th>困っていること</th><th>確かめること・対処</th></tr>
+          <tr><td>ボタンを押してもカウントできない</td><td>商材が「全商材まとめ」になっていませんか。個別の商材を選んでください</td></tr>
+          <tr><td>数字キーで入力できない</td><td>検索欄などの入力欄が選ばれていませんか。入力欄の外をクリックしてから押してください</td></tr>
+          <tr><td>押し間違えた</td><td><kbd>Ctrl</kbd>＋<kbd>Z</kbd> か、取り消しバーの「元に戻す」で取り消せます。時間がたっている場合は、そのボタンの「−」で戻してください</td></tr>
+          <tr><td>架電数/h がおかしい</td><td>タイマーを止め忘れた、または動かし忘れた可能性があります。画面の下のほうの設定欄で、稼働時間を手で直せます</td></tr>
+          <tr><td>小窓が開かない</td><td>Chrome か Edge の最新版を使ってください。それ以外のブラウザでは、ポップアップを許可してください</td></tr>
+          <tr><td>再架電の通知が来ない</td><td>ブラウザの通知が許可されているか確かめてください。アプリの画面（タブ）を閉じると通知されません</td></tr>
+          <tr><td>切り返し検索で何も出ない</td><td>ナレッジベースの「カウンター」に登録があるか確かめてください。商材ごとに分かれています</td></tr>
+          <tr><td>リストやトークが選択肢にない</td><td>トップバーの「リスト/トーク」から登録してください。他の人が登録したものは表示されません</td></tr>
+          <tr><td>トークのA/B判定が出ない</td><td>2種類以上のトークを選んで架電した記録が必要です。件数が少ないうちは「まだ誤差の範囲です」と表示されます</td></tr>
+          <tr><td>トップバーに「ローカル」と出ている</td><td>クラウドに接続できていません。記録はこの端末にだけ保存され、チームには共有されません。通信環境を確かめ、直らない場合は管理者に知らせてください</td></tr>
+          <tr><td>AI分析が使えない</td><td>管理者の設定が必要な機能です。管理者に確認してください</td></tr>
+          <tr><td>自分の名前がログイン画面にない</td><td>管理者にアカウントの追加を依頼してください</td></tr>
+          </table></div>
+          </section>
+          <p class="man-empty" id="man-empty" style="display:none;">見つかりませんでした。別の言葉で検索してください。</p>
+          </div>
+        </div>
+      </div>
+
       <div id="page-ranking" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
         <div class="card">
           <div class="card-header">
@@ -2194,7 +2487,7 @@
 
   // --- タブ切り替え処理 ---
   function switchTab(tabName) {
-    const tabs = ['counter', 'ranking', 'analytics', 'script', 'kpi', 'status', 'listanalysis'];
+    const tabs = ['counter', 'ranking', 'analytics', 'script', 'kpi', 'status', 'listanalysis', 'manual'];
     tabs.forEach(t => {
       document.getElementById(`nav-${t}`).className = (t === tabName) ? "nav-item active" : "nav-item";
       document.getElementById(`page-${t}`).style.display = (t === tabName) ? "flex" : "none";
@@ -2207,7 +2500,8 @@
         'analytics': '数値分析レポート',
         'status': 'ステータス分析',
         'listanalysis': 'リスト/トーク分析',
-        'ranking': 'チームランキング'
+        'ranking': 'チームランキング',
+        'manual': '使い方'
     };
     document.getElementById("breadcrumb-current").textContent = titles[tabName];
 
@@ -2218,6 +2512,24 @@
     else if(tabName === 'kpi') loadKpiData();
     else if(tabName === 'status') renderStatusAnalysis();
     else if(tabName === 'listanalysis') renderListAnalysis();
+  }
+
+  // --- 使い方マニュアル：目次から章へ移動・本文の検索（章ごとに表示／非表示） ---
+  function scrollToManual(id) {
+    const q = document.getElementById('man-search');
+    if (q.value) { q.value = ''; filterManual(''); }
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function filterManual(query) {
+    const q = query.trim().toLowerCase();
+    let hits = 0;
+    document.querySelectorAll('#manual-body .man-sec').forEach(sec => {
+      const show = !q || sec.textContent.toLowerCase().includes(q);
+      sec.style.display = show ? '' : 'none';
+      if (show) hits++;
+    });
+    document.getElementById('man-toc').style.display = q ? 'none' : '';
+    document.getElementById('man-empty').style.display = hits ? 'none' : 'block';
   }
 
   // アカウント／商材／リスト／トークの4点セットのセレクトを指定IDプレフィックスに対して組み立てる（比較モードのA/B等、同じ形のフィルターが複数必要な箇所で使う）
