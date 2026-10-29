@@ -150,6 +150,12 @@
     .stepper .val { width: 44px; text-align: center; font-size: 15px; font-weight: 700; color: var(--text-main); border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; background: #fff; display: flex; align-items: center; justify-content: center; height: 34px; }
     .apo-box { background-color: #f0fdf4 !important; border-color: #86efac !important; }
     .apo-box .c-label { color: #059669; }
+
+    /* キーボードショートカット（キー表示・押下時のハイライト） */
+    .kb-hint { display: inline-block; min-width: 16px; padding: 0 4px; margin-right: 6px; border: 1px solid #cbd5e1; border-bottom-width: 2px; border-radius: 3px; background: #f8fafc; color: var(--text-muted); font-size: 10px; font-weight: 700; line-height: 15px; text-align: center; font-family: inherit; vertical-align: 1px; }
+    .mini-counter-item .kb-hint { min-width: 12px; padding: 0 2px; margin-right: 3px; font-size: 9px; line-height: 11px; }
+    .kb-flash { animation: kbFlash 0.4s ease-out; }
+    @keyframes kbFlash { from { box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.6); border-color: var(--accent); } to { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); } }
     .apo-box .stepper { border-color: #059669; }
     .apo-box .stepper button { background: #059669; color: white; }
     .apo-box .stepper button:hover { background: #047857; }
@@ -579,7 +585,10 @@
 
             <div class="card" style="position:relative;">
               <div id="panel-disabled-msg" class="overlay-msg" style="border-radius:var(--radius);">※全商材まとめ閲覧モード<br>（入力不可）</div>
-              <div class="card-header">架電入力パネル</div>
+              <div class="card-header">
+                <span>架電入力パネル</span>
+                <span style="font-size:11px; font-weight:600; color:var(--text-muted);">キーボード: <kbd class="kb-hint" style="margin:0 2px;">1</kbd>〜<kbd class="kb-hint" style="margin:0 2px;">0</kbd>で＋1 ／ <kbd class="kb-hint" style="margin:0 2px;">Shift</kbd>＋数字で−1</span>
+              </div>
               <div class="card-body" style="padding:15px;">
                 <div id="controls-grid" class="counter-grid">
                 </div>
@@ -1589,6 +1598,36 @@
     }
   }
 
+  // --- キーボードショートカット（1〜9,0 で各項目を＋1、Shift＋数字で−1） ---
+  // items の id 0〜9 の順に、キーボードの数字キーを 1,2,…,9,0 と割り当てる（パネルの並び順と同じ）
+  const COUNT_SHORTCUT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+
+  function handleCountShortcut(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing) return;
+    // Shift押下時は e.key が記号になるため、物理キーの e.code で判定する（テンキーも可）
+    const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || '');
+    if (!m) return;
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+
+    const inMini = isMiniMode && t && t.ownerDocument === miniDoc;
+    if (!inMini) {
+      // 本体：ログイン済み・コールカウント画面を表示中・モーダルが開いていないときだけ有効
+      if (!currentUser || isMiniMode) return;
+      if (document.getElementById('page-counter').style.display === 'none') return;
+      if (Array.from(document.querySelectorAll('.modal-overlay')).some(el => el.style.display === 'flex')) return;
+    }
+    if (currentProduct === ALL_PRODUCTS_KEY) return;
+
+    const id = COUNT_SHORTCUT_KEYS.indexOf(m[1]);
+    e.preventDefault();
+    changeValue(id, e.shiftKey ? -1 : 1);
+
+    const valEl = inMini ? miniDoc.getElementById(`mini-val-${id}`) : document.getElementById(`panel-val-${id}`);
+    const card = valEl && valEl.closest(inMini ? '.mini-counter-item' : '.counter-item');
+    if (card) { card.classList.remove('kb-flash'); void card.offsetWidth; card.classList.add('kb-flash'); }
+  }
+
   function buildControlPanel() {
     const grid = document.getElementById("controls-grid");
     Array.from(grid.children).forEach(c => { if(c.id !== "panel-disabled-msg") grid.removeChild(c); });
@@ -1596,7 +1635,7 @@
       const div = document.createElement("div");
       div.className = `counter-item ${item.cls || ''}`;
       div.innerHTML = `
-        <span class="c-label">${item.name}</span>
+        <span class="c-label"><kbd class="kb-hint">${COUNT_SHORTCUT_KEYS[item.id]}</kbd>${item.name}</span>
         <div class="stepper">
           <button onclick="changeValue(${item.id}, -1)">−</button>
           <div class="val" id="panel-val-${item.id}">0</div>
@@ -1689,6 +1728,7 @@
     switchMiniView('count');
     renderMini();
 
+    targetWindow.document.addEventListener('keydown', handleCountShortcut);
     targetWindow.addEventListener('pagehide', restoreMiniWidget, { once: true });
   }
 
@@ -1771,7 +1811,10 @@
 
       const label = document.createElement('span');
       label.className = 'mc-label';
-      label.textContent = item.name;
+      const kbd = document.createElement('kbd');
+      kbd.className = 'kb-hint';
+      kbd.textContent = COUNT_SHORTCUT_KEYS[item.id];
+      label.append(kbd, item.name);
 
       const stepper = document.createElement('div');
       stepper.className = 'mc-stepper';
@@ -3517,7 +3560,7 @@
     const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], {type:'text/csv;charset=utf-8;'})); l.download=`架電記録_全履歴_${getTodayString()}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l);
   }
 
-  window.onload = function() { init(); initMiniWidgetHandlers(); };
+  window.onload = function() { init(); initMiniWidgetHandlers(); document.addEventListener('keydown', handleCountShortcut); };
 </script>
 </body>
 </html>
