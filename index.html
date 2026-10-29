@@ -299,6 +299,13 @@
     .pace-forecast .pace-title { font-size: 11px; font-weight: 700; color: var(--text-muted); }
     .pace-forecast .pace-sub { font-size: 11px; color: var(--text-muted); }
     .pace-ok { color: #047857; font-weight: 700; }
+
+    /* リスト/トーク分析：並べ替え・参考値 */
+    th.la-sortable { cursor: pointer; user-select: none; }
+    th.la-sortable:hover { background-color: #334155; }
+    th.la-sortable .la-sort-mark { font-size: 10px; margin-left: 3px; opacity: 0.9; }
+    .la-low-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 10px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 700; vertical-align: 1px; }
+    tr.la-low td.la-rate { color: var(--text-muted); }
     .pace-ng { color: #b91c1c; font-weight: 700; }
     .mini-session-row label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .mini-session-row select { width: 100%; min-width: 0; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; background: #fff; color: var(--text-main); outline: none; }
@@ -1011,16 +1018,32 @@
         </div>
 
         <div class="card">
-          <div class="card-header">リスト/トーク別 数値分析（集計軸で選んだ単位ごとに、受付突破率・アポ率・架電数/hなどを比較できます）</div>
+          <div class="card-header">
+            <span>グループ別の比較グラフ</span>
+            <div class="filter-group">
+              <label for="la-chart-metric">指標</label>
+              <select id="la-chart-metric" onchange="renderListAnalysis()">
+                <option value="apoRate">アポ率</option>
+                <option value="brk">受付突破率</option>
+                <option value="tantoRate">担受注率</option>
+                <option value="cph">架電数/h</option>
+                <option value="tot">総架電</option>
+                <option value="apo">★アポ</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="la-chart-empty" style="display:none; font-size:12px; color:var(--text-muted); text-align:center; padding:20px 10px;">データがありません</div>
+            <div id="la-chart-wrap" class="chart-container" style="height:200px;"><canvas id="la-chart"></canvas></div>
+            <div id="la-chart-legend" style="font-size:11px; color:var(--text-muted); margin-top:6px;"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">リスト/トーク別 数値分析（列見出しをクリックすると並べ替えできます）</div>
           <div class="table-container">
             <table>
-              <thead>
-                <tr>
-                  <th>グループ</th><th>稼働(h)</th><th>総架電</th><th>受付BK</th><th>不通</th><th>不在</th><th>担当BK</th>
-                  <th>目的</th><th>メリット(機能)</th><th>メリット(ベネ)</th><th>断りづらい</th><th>クロージング</th><th>カウンター</th>
-                  <th>★アポ</th><th>突破率</th><th>アポ率</th><th>担受注率</th><th>架電数/h</th>
-                </tr>
-              </thead>
+              <thead id="la-table-head"></thead>
               <tbody id="la-table-body"></tbody>
             </table>
           </div>
@@ -3642,21 +3665,122 @@
       }
     }
 
-    const tb = document.getElementById("la-table-body"); tb.innerHTML = "";
-    const groupKeys = Object.keys(groups).sort();
-    if (!groupKeys.length) {
-      tb.innerHTML = '<tr><td colspan="18" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>';
-      return;
-    }
-
-    groupKeys.forEach(k => {
+    const rows = Object.keys(groups).map(k => {
       const g = groups[k], c = g.c, t = g.t;
       const uk = c[0]||0, fu = c[1]||0, fuz = c[2]||0;
       const mokuteki = c[3]||0, meritKinou = c[4]||0, meritBene = c[5]||0, kotowarizurai = c[6]||0, closing = c[7]||0, counter = c[8]||0;
       const tbk = mokuteki+meritKinou+meritBene+kotowarizurai+closing+counter, apo = c[9]||0, hc = tbk+apo, tot = uk+fu+fuz+hc;
+      return {
+        group: k, hours: t/3600, tot, uk, fu, fuz, tbk, mokuteki, meritKinou, meritBene, kotowarizurai, closing, counter, apo,
+        brk: tot>0 ? (hc/tot)*100 : 0, apoRate: tot>0 ? (apo/tot)*100 : 0, tantoRate: hc>0 ? (apo/hc)*100 : 0, cph: t>0 ? tot/(t/3600) : 0,
+        lowSample: tot < LA_MIN_CALLS
+      };
+    });
+
+    renderListAnalysisHead();
+    const tb = document.getElementById("la-table-body"); tb.innerHTML = "";
+    renderListAnalysisChart(rows);
+    if (!rows.length) {
+      tb.innerHTML = `<tr><td colspan="${LA_COLUMNS.length}" style="padding:30px; text-align:center; color:#888;">データがありません（架電パネルで「リスト」「トーク」を選んで架電した記録がまだありません）</td></tr>`;
+      return;
+    }
+
+    const { key, dir } = laSort;
+    rows.sort((a, b) => {
+      const r = key === 'group' ? a.group.localeCompare(b.group, 'ja') : (a[key] - b[key]);
+      return (dir === 'asc' ? r : -r) || a.group.localeCompare(b.group, 'ja');
+    });
+
+    rows.forEach(r => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td style="font-weight:600; color:var(--accent); text-align:left;">${escapeHTML(k)}</td><td>${(t/3600).toFixed(1)}</td><td style="font-weight:700;">${tot}</td><td>${uk}</td><td>${fu}</td><td>${fuz}</td><td>${tbk}</td><td>${mokuteki}</td><td>${meritKinou}</td><td>${meritBene}</td><td>${kotowarizurai}</td><td>${closing}</td><td>${counter}</td><td style="color:var(--danger); font-weight:700;">${apo}</td><td>${tot>0?((hc/tot)*100).toFixed(1):'0.0'}%</td><td>${tot>0?((apo/tot)*100).toFixed(1):'0.0'}%</td><td>${hc>0?((apo/hc)*100).toFixed(1):'0.0'}%</td><td style="background:#f4f6f9; font-weight:700;">${t>0?(tot/(t/3600)).toFixed(1):'0.0'}</td>`;
+      if (r.lowSample) { tr.className = 'la-low'; tr.title = `総架電が${LA_MIN_CALLS}件未満のため、率は参考値です`; }
+      const badge = r.lowSample ? '<span class="la-low-badge">参考値</span>' : '';
+      tr.innerHTML = `<td style="font-weight:600; color:var(--accent); text-align:left;">${escapeHTML(r.group)}${badge}</td><td>${r.hours.toFixed(1)}</td><td style="font-weight:700;">${r.tot}</td><td>${r.uk}</td><td>${r.fu}</td><td>${r.fuz}</td><td>${r.tbk}</td><td>${r.mokuteki}</td><td>${r.meritKinou}</td><td>${r.meritBene}</td><td>${r.kotowarizurai}</td><td>${r.closing}</td><td>${r.counter}</td><td style="color:var(--danger); font-weight:700;">${r.apo}</td><td class="la-rate">${r.brk.toFixed(1)}%</td><td class="la-rate">${r.apoRate.toFixed(1)}%</td><td class="la-rate">${r.tantoRate.toFixed(1)}%</td><td style="background:#f4f6f9; font-weight:700;">${r.cph.toFixed(1)}</td>`;
       tb.appendChild(tr);
+    });
+  }
+
+  // 列定義（key は renderListAnalysis の行オブジェクトのプロパティ名）。見出しクリックでその列で並べ替える
+  const LA_COLUMNS = [
+    { key: 'group', label: 'グループ' }, { key: 'hours', label: '稼働(h)' }, { key: 'tot', label: '総架電' },
+    { key: 'uk', label: '受付BK' }, { key: 'fu', label: '不通' }, { key: 'fuz', label: '不在' }, { key: 'tbk', label: '担当BK' },
+    { key: 'mokuteki', label: '目的' }, { key: 'meritKinou', label: 'メリット(機能)' }, { key: 'meritBene', label: 'メリット(ベネ)' },
+    { key: 'kotowarizurai', label: '断りづらい' }, { key: 'closing', label: 'クロージング' }, { key: 'counter', label: 'カウンター' },
+    { key: 'apo', label: '★アポ' }, { key: 'brk', label: '突破率' }, { key: 'apoRate', label: 'アポ率' },
+    { key: 'tantoRate', label: '担受注率' }, { key: 'cph', label: '架電数/h' }
+  ];
+  // 総架電がこの件数未満のグループは、率がぶれやすいため「参考値」として扱う
+  const LA_MIN_CALLS = 30;
+  let laSort = { key: 'group', dir: 'asc' };
+  let laChartInstance = null;
+
+  function renderListAnalysisHead() {
+    const tr = document.createElement('tr');
+    LA_COLUMNS.forEach(col => {
+      const th = document.createElement('th');
+      th.className = 'la-sortable';
+      th.dataset.sort = col.key;
+      th.title = 'クリックで並べ替え';
+      th.textContent = col.label;
+      if (laSort.key === col.key) {
+        const mark = document.createElement('span');
+        mark.className = 'la-sort-mark';
+        mark.textContent = laSort.dir === 'asc' ? '▲' : '▼';
+        th.appendChild(mark);
+      }
+      th.addEventListener('click', () => {
+        // 同じ列なら昇順/降順を切り替え。別の列は、グループ名なら昇順、数値なら大きい順から
+        if (laSort.key === col.key) laSort.dir = laSort.dir === 'asc' ? 'desc' : 'asc';
+        else laSort = { key: col.key, dir: col.key === 'group' ? 'asc' : 'desc' };
+        renderListAnalysis();
+      });
+      tr.appendChild(th);
+    });
+    const head = document.getElementById('la-table-head');
+    head.innerHTML = '';
+    head.appendChild(tr);
+  }
+
+  function renderListAnalysisChart(rows) {
+    const metricSel = document.getElementById('la-chart-metric');
+    const metric = metricSel.value;
+    const metricLabel = metricSel.options[metricSel.selectedIndex].text;
+    const isRate = ['apoRate', 'brk', 'tantoRate'].includes(metric);
+    const fmt = v => metric === 'tot' || metric === 'apo' ? String(v) : (v.toFixed(1) + (isRate ? '%' : ''));
+
+    if (laChartInstance) { laChartInstance.destroy(); laChartInstance = null; }
+    document.getElementById('la-chart-empty').style.display = rows.length ? 'none' : 'block';
+    const wrap = document.getElementById('la-chart-wrap');
+    wrap.style.display = rows.length ? 'block' : 'none';
+    const hasLow = rows.some(r => r.lowSample);
+    document.getElementById('la-chart-legend').textContent = hasLow ? `※灰色のバーは総架電${LA_MIN_CALLS}件未満のグループです（率は参考値）` : '';
+    if (!rows.length) return;
+
+    const sorted = [...rows].sort((a, b) => (b[metric] - a[metric]) || a.group.localeCompare(b.group, 'ja'));
+    wrap.style.height = `${Math.max(160, sorted.length * 32 + 50)}px`;
+    laChartInstance = new Chart(document.getElementById('la-chart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: sorted.map(r => r.group),
+        datasets: [{
+          label: metricLabel,
+          data: sorted.map(r => +r[metric].toFixed(1)),
+          backgroundColor: sorted.map(r => r.lowSample ? '#cbd5e1' : '#14b8a6'),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: ctx => `${metricLabel}: ${fmt(sorted[ctx.dataIndex][metric])}`,
+            afterLabel: ctx => `総架電 ${sorted[ctx.dataIndex].tot}件${sorted[ctx.dataIndex].lowSample ? '（参考値）' : ''}`
+          } }
+        },
+        scales: { x: { beginAtZero: true, ticks: { callback: v => isRate ? v + '%' : v } } }
+      }
     });
   }
 
