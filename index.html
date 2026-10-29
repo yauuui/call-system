@@ -443,6 +443,7 @@
     .coach-msg { font-size: 13px; font-weight: 700; color: var(--text-main); line-height: 1.5; }
     .coach-msg .coach-icon { margin-right: 4px; }
     .coach-guide { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .coach-box.suggesting .coach-guide { display: none; }
     .streak-chip { margin-left: auto; font-size: 11px; color: #b45309; background: #fef3c7; border-radius: 10px; padding: 0 8px; font-weight: 700; white-space: nowrap; }
     .streak-chip:empty { display: none; }
     .growth-body { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; }
@@ -464,6 +465,26 @@
     .badge.locked .b-icon { filter: grayscale(1); opacity: 0.35; }
     .badge.locked .b-name { color: var(--text-muted); }
     .badge.earned { border-color: #fcd34d; background: #fffbeb; }
+    /* 切り返しトークの検索・候補 */
+    .coach-search { position: relative; }
+    .coach-search input { width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; background: #fff; }
+    .coach-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2); }
+    .counter-results { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); z-index: 50; padding: 6px; text-align: left; }
+    .counter-results.open { display: block; }
+    .counter-results.mini { display: block; position: static; box-shadow: none; border: none; padding: 0; max-height: none; flex: 1; min-height: 0; overflow-y: auto; }
+    .ct-item { border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; margin-bottom: 6px; background: #fff; }
+    .ct-neg { font-size: 12px; font-weight: 700; color: #991b1b; }
+    .ct-text { font-size: 12px; color: var(--text-main); margin-top: 3px; white-space: pre-wrap; line-height: 1.5; }
+    .ct-exp { font-size: 11px; color: var(--text-muted); margin-top: 3px; white-space: pre-wrap; }
+    .ct-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; font-size: 10px; color: var(--text-muted); }
+    .ct-used { border: 1px solid #99f6e4; background: #f0fdfa; color: var(--accent-hover); border-radius: 10px; padding: 1px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .ct-empty { font-size: 12px; color: var(--text-muted); padding: 8px; }
+    .ct-empty mark, .ct-text mark, .ct-neg mark { background: #fef08a; color: inherit; padding: 0; }
+    .coach-suggest .cs-item { font-size: 12px; font-weight: 600; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .coach-suggest .cs-neg { color: #991b1b; }
+    .mini-talk-area { flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
+    .mini-talk-area input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
+    .mini-tab-badge:not(:empty) { margin-left: 3px; background: #ef4444; color: #fff; border-radius: 8px; padding: 0 5px; font-size: 10px; }
   </style>
 </head>
 <body>
@@ -1302,10 +1323,17 @@
         <button class="mini-tab-btn" id="mini-tab-memo" title="メモモード">
           <svg class="icon" style="width:13px; height:13px;"><use href="#icon-edit"></use></svg> メモ
         </button>
+        <button class="mini-tab-btn" id="mini-tab-talk" title="切り返しトークを検索">
+          <svg class="icon" style="width:13px; height:13px;"><use href="#icon-message"></use></svg> 切り返し<span class="mini-tab-badge" id="mini-talk-badge"></span>
+        </button>
       </div>
 
       <div class="mini-counter-grid" id="mini-counter-grid"></div>
       <textarea class="mini-memo-textarea" id="mini-memo-textarea" style="display:none;" placeholder="架電中に気づいたこと、次にかけるリストへの申し送りなどを自由にメモできます..."></textarea>
+      <div class="mini-talk-area" id="mini-talk-area" style="display:none;">
+        <input type="search" id="mini-counter-search" placeholder="断り文句で検索（例：忙しい）" autocomplete="off">
+        <div class="counter-results mini" id="mini-counter-results"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1682,7 +1710,7 @@
         document.getElementById("edit-mode-checkbox").checked = false;
     }
 
-    updateSelectUIs(); buildControlPanel(); updateProductModeUI(); renderCelebratePrefs(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
+    updateSelectUIs(); buildControlPanel(); initCounterSearch(); updateProductModeUI(); renderCelebratePrefs(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
   }
 
   function logout() {
@@ -1896,6 +1924,10 @@
         ${FLOW_PRE_IDS.map(id => stepHTML(id, 'pre')).join('')}
         <div class="flow-hint coach-box" id="coach-box">
           <div class="coach-msg" id="coach-msg"></div>
+          <div class="coach-search">
+            <input type="search" id="counter-search" placeholder="切り返しを検索（断り文句で。例：忙しい）" autocomplete="off">
+            <div class="counter-results" id="counter-results"></div>
+          </div>
           <div class="coach-guide">担当と話せたら、下の段で「どこまで進んで終わったか」を押す ↓</div>
         </div>
       </div>
@@ -1904,6 +1936,17 @@
         ${FLOW_TALK_IDS.map(id => stepHTML(id, 'talk')).join('')}
       </div>`;
   }
+
+  function initCounterSearch() {
+    const input = document.getElementById('counter-search');
+    if (!input || input.dataset.ready) return;
+    input.dataset.ready = '1';
+    input.addEventListener('input', () => renderCounterSearch(document, 'counter-search', 'counter-results', false));
+    input.addEventListener('focus', () => renderCounterSearch(document, 'counter-search', 'counter-results', false));
+    input.addEventListener('keydown', e => { if (e.key === 'Escape') { input.value = ''; closeCounterResults(); input.blur(); } });
+    document.addEventListener('click', e => { if (!e.target.closest('.coach-search')) closeCounterResults(); });
+  }
+  function closeCounterResults() { const r = document.getElementById('counter-results'); if (r) r.classList.remove('open'); }
 
   function openCounterDetails() {
     const d = document.getElementById('counter-details');
@@ -1948,9 +1991,9 @@
     let targetWindow;
     try {
       if ('documentPictureInPicture' in window) {
-        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 610 });
+        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 620 });
       } else {
-        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=650,popup=yes');
+        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=660,popup=yes');
         if (!targetWindow) {
           showToast('ポップアップがブロックされました。ブラウザの設定をご確認ください', '#icon-bell');
           return;
@@ -2025,6 +2068,8 @@
     document.getElementById('mini-btn-undo').addEventListener('click', () => undoLastCall());
     document.getElementById('mini-tab-count').addEventListener('click', () => switchMiniView('count'));
     document.getElementById('mini-tab-memo').addEventListener('click', () => switchMiniView('memo'));
+    document.getElementById('mini-tab-talk').addEventListener('click', () => switchMiniView('talk'));
+    document.getElementById('mini-counter-search').addEventListener('input', () => renderCounterSearch(miniDoc, 'mini-counter-search', 'mini-counter-results', true));
     document.getElementById('mini-memo-textarea').addEventListener('input', (e) => scheduleMemoSave(e.target.value));
     // 小窓で商材／リスト／トークを変えたら本体の選択欄に反映し、本体で切り替えたときと同じ処理を通す
     MINI_SELECT_KEYS.forEach(k => {
@@ -2057,8 +2102,14 @@
     miniViewMode = mode;
     miniDoc.getElementById('mini-tab-count').classList.toggle('active', mode === 'count');
     miniDoc.getElementById('mini-tab-memo').classList.toggle('active', mode === 'memo');
+    miniDoc.getElementById('mini-tab-talk').classList.toggle('active', mode === 'talk');
     miniDoc.getElementById('mini-counter-grid').style.display = mode === 'count' ? 'grid' : 'none';
     miniDoc.getElementById('mini-memo-textarea').style.display = mode === 'memo' ? 'block' : 'none';
+    miniDoc.getElementById('mini-talk-area').style.display = mode === 'talk' ? 'flex' : 'none';
+    if (mode === 'talk') {
+      miniDoc.getElementById('mini-talk-badge').textContent = '';
+      renderCounterSearch(miniDoc, 'mini-counter-search', 'mini-counter-results', true);
+    }
   }
 
   let miniMemoSaveTimer = null;
@@ -3420,6 +3471,8 @@
     saveData(); render();
     showUndoBar(entry);
     if (id === 9 && actualDelta > 0) celebrateApo();
+    // 断りづらい・カウンターで終わった（断られた）ときは、よく使う切り返しトークを候補として出す
+    if ((id === 6 || id === 8) && actualDelta > 0) showCounterSuggestions(id);
   }
 
   // --- アポ獲得の演出（紙吹雪・音）と拍手 ---
@@ -3526,6 +3579,103 @@
     el.textContent = total > 0 ? `あなたへの👏 ${total}` : '';
     el.title = total > 0 ? Object.entries(claps).map(([f, n]) => `${f}: ${n}`).join(' / ') : '';
   }
+
+  // --- 切り返しトーク（ナレッジベースの「カウンター」）の検索と候補表示 ---
+  // 対象：選択中の商材（全商材まとめなら全商材）のチーム共有＋個人用のカウンタートーク
+  function getCounterTalks() {
+    const products = currentProduct === ALL_PRODUCTS_KEY ? productsList : [currentProduct];
+    const out = [];
+    products.forEach(p => {
+      [['team', scriptData.team], ['personal', scriptData.personal]].forEach(([scope, src]) => {
+        const d = src && src[p];
+        if (!d || typeof d !== 'object' || !Array.isArray(d.counters)) return;
+        d.counters.forEach(c => {
+          if (!c || (!c.negative && !c.text)) return;
+          out.push({ ...c, scope, product: p, key: `${p}|${c.negative || ''}|${(c.text || '').slice(0, 40)}` });
+        });
+      });
+    });
+    return out;
+  }
+  // 「使った👍」の回数（端末ごと）。よく使う順に並べるために使う
+  function getCounterUsage() { try { return JSON.parse(localStorage.getItem('kaden_counter_usage_' + currentUser)) || {}; } catch (e) { return {}; } }
+  function addCounterUsage(key) {
+    const u = getCounterUsage(); u[key] = (u[key] || 0) + 1;
+    try { localStorage.setItem('kaden_counter_usage_' + currentUser, JSON.stringify(u)); } catch (e) {}
+  }
+  const normText = t => (t || '').normalize('NFKC').toLowerCase();
+
+  // 検索語（空白区切りのすべてを含む）で絞り込み、よく使う順に並べる。検索語が空なら、よく使う順の全件
+  function searchCounterTalks(query) {
+    const terms = normText(query).split(/\s+/).filter(Boolean);
+    const usage = getCounterUsage();
+    return getCounterTalks()
+      .map((c, i) => ({ c, i, hay: normText(`${c.negative} ${c.text} ${c.explanation || ''}`) }))
+      .filter(x => terms.every(t => x.hay.includes(t)))
+      .sort((a, b) => ((usage[b.c.key] || 0) - (usage[a.c.key] || 0)) || ((normText(a.c.negative).includes(terms[0] || '\u0000') ? 0 : 1) - (normText(b.c.negative).includes(terms[0] || '\u0000') ? 0 : 1)) || a.i - b.i)
+      .map(x => x.c);
+  }
+
+  function highlight(text, query) {
+    let html = escapeHTML(text || '');
+    normText(query).split(/\s+/).filter(Boolean).forEach(t => {
+      const esc = escapeHTML(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      html = html.replace(new RegExp(esc, 'gi'), m => `<mark>${m}</mark>`);
+    });
+    return html;
+  }
+
+  // keepOpen：「使った👍」を押した直後など、検索欄からフォーカスが外れても一覧を開いたままにする
+  function renderCounterSearch(doc, inputId, resultsId, isMini, keepOpen = false) {
+    const input = doc.getElementById(inputId), box = doc.getElementById(resultsId);
+    if (!input || !box) return;
+    const q = input.value.trim();
+    const list = searchCounterTalks(q);
+    const usage = getCounterUsage();
+    box.innerHTML = '';
+    if (!getCounterTalks().length) {
+      box.innerHTML = '<div class="ct-empty">切り返しトークがまだ登録されていません。ナレッジベースの「カウンター」に登録すると、ここで検索できます。</div>';
+    } else if (!list.length) {
+      box.innerHTML = `<div class="ct-empty">「${escapeHTML(q)}」に当てはまる切り返しはありません</div>`;
+    } else {
+      list.slice(0, isMini ? 30 : 8).forEach(c => {
+        const item = doc.createElement('div');
+        item.className = 'ct-item';
+        item.innerHTML = `<div class="ct-neg">「${highlight(c.negative, q)}」</div><div class="ct-text">${highlight(c.text, q)}</div>${c.explanation ? `<div class="ct-exp">${escapeHTML(c.explanation)}</div>` : ''}
+          <div class="ct-meta"><span>${c.scope === 'team' ? 'チーム共有' : '個人用'}${currentProduct === ALL_PRODUCTS_KEY ? '・' + escapeHTML(c.product) : ''}${usage[c.key] ? `・使った ${usage[c.key]}回` : ''}</span></div>`;
+        const btn = doc.createElement('button');
+        btn.className = 'ct-used'; btn.textContent = '使った👍';
+        btn.title = '使った回数を記録します（よく使う切り返しが上に来ます）';
+        btn.addEventListener('click', e => { e.stopPropagation(); addCounterUsage(c.key); renderCounterSearch(doc, inputId, resultsId, isMini, true); });
+        item.querySelector('.ct-meta').appendChild(btn);
+        box.appendChild(item);
+      });
+    }
+    if (!isMini) box.classList.toggle('open', keepOpen || doc.activeElement === input || q !== '');
+  }
+
+  // 断りづらい／カウンターを押したときの候補表示（本体はコーチ欄に30秒、小窓は「切り返し」タブにバッジ）
+  function showCounterSuggestions(stageId) {
+    const list = searchCounterTalks('');
+    if (isMiniMode) {
+      const badge = miniDoc.getElementById('mini-talk-badge');
+      if (badge && miniViewMode !== 'talk' && list.length) badge.textContent = String(Math.min(list.length, 9));
+      return;
+    }
+    const el = document.getElementById('coach-msg');
+    if (!el) return;
+    coachOverride = { until: Date.now() + 30000 };
+    document.getElementById('coach-box').classList.add('suggesting');
+    const stage = stageId === 6 ? '断りづらい' : 'カウンター';
+    if (!list.length) {
+      el.innerHTML = `<span class="coach-icon">💬</span>${stage}で終わりました。ナレッジベースの「カウンター」に切り返しを登録すると、ここに候補が出ます`;
+    } else {
+      el.innerHTML = `<div class="coach-suggest"><span class="coach-icon">💬</span>${stage}で終わりました。よく使う切り返し：${list.slice(0, 2).map(c => `<div class="cs-item" title="${escapeHTML(c.text)}"><span class="cs-neg">「${escapeHTML(c.negative)}」</span> → ${escapeHTML(c.text)}</div>`).join('')}</div>`;
+    }
+    clearTimeout(coachOverrideTimer);
+    coachOverrideTimer = setTimeout(() => { coachOverride = null; document.getElementById('coach-box')?.classList.remove('suggesting'); renderCoachMessage(); }, 30000);
+  }
+  let coachOverrideTimer = null;
 
   // --- 架電ログ・取り消し ---
   function hourColOfTime(ts) { const h = new Date(ts).getHours(); return (h >= 9 && h <= 17) ? h - 9 : 9; }
