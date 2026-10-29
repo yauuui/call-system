@@ -361,7 +361,7 @@
     .counter-toolbar .filters { gap: 10px; flex-wrap: nowrap; }
     .counter-toolbar .action-btns { gap: 6px; flex-wrap: nowrap; }
     .counter-toolbar .filter-group { gap: 6px; }
-    .counter-toolbar .filter-group select, .counter-toolbar .filter-group input { min-width: 0; width: 128px; padding: 6px 8px; }
+    .counter-toolbar .filter-group select, .counter-toolbar .filter-group input { min-width: 0; width: 112px; padding: 6px 8px; }
     .counter-toolbar .btn { padding: 6px 10px; font-size: 12px; }
 
     .status-band { flex-direction: row; align-items: stretch; flex-wrap: wrap; }
@@ -558,6 +558,18 @@
     .hm-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); margin-top: 8px; flex-wrap: wrap; }
     .hm-legend .hm-scale { width: 120px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #ccfbf1, #0f766e); }
     .hm-legend .hm-lowbox { width: 14px; height: 10px; border-radius: 2px; background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 3px, #e2e8f0 3px, #e2e8f0 6px); }
+    /* 今日のハイライト・日報 */
+    .hl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .hl-card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: #fff; }
+    .hl-card.main { background: linear-gradient(135deg, #1e293b, #334155); color: #fff; border-color: #1e293b; }
+    .hl-card .hl-label { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+    .hl-card.main .hl-label { color: #cbd5e1; }
+    .hl-card .hl-val { font-size: 18px; font-weight: 700; margin-top: 3px; line-height: 1.3; }
+    .hl-card.main .hl-val { color: #5eead4; }
+    .hl-card .hl-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .hl-card.main .hl-sub { color: #cbd5e1; }
+    .hl-card.good { border-color: #86efac; background: #f0fdf4; }
+    .coach-link { border: 1px solid #99f6e4; background: #f0fdfa; color: var(--accent-hover); border-radius: 12px; padding: 1px 10px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 4px; }
   </style>
 </head>
 <body>
@@ -717,6 +729,9 @@
           <div class="action-btns">
             <button class="btn btn-outline" onclick="openTemplateModal()" title="進捗報告テンプレ">
               <svg class="icon"><use href="#icon-message"></use></svg> 報告
+            </button>
+            <button class="btn btn-outline" onclick="openDailyReport()" title="今日のハイライトと日報（Slackに貼れる文章）">
+              <svg class="icon"><use href="#icon-star"></use></svg> 日報
             </button>
             <button class="btn btn-outline" onclick="copyForReview()" title="振り返り用の数値をコピー">
               <svg class="icon"><use href="#icon-doc"></use></svg> 振返り
@@ -1534,6 +1549,24 @@
       </div>
       <div id="cb-notify-hint" class="cb-hint"></div>
       <div id="cb-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= モーダル (今日のハイライトと日報) ================= -->
+<div id="report-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:720px;">
+    <div class="modal-header">
+      <h2><svg class="icon"><use href="#icon-star"></use></svg> <span id="report-title">今日のハイライト</span></h2>
+      <button class="btn-close" onclick="closeDailyReport()"><svg class="icon" style="width:24px; height:24px;"><use href="#icon-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="hl-grid" id="report-highlights"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 6px;">
+        <span style="font-size:13px; font-weight:700;">日報（Slackにそのまま貼れます。編集してからコピーできます）</span>
+        <button class="btn btn-primary" onclick="copyDailyReport()"><svg class="icon"><use href="#icon-doc"></use></svg> コピーする</button>
+      </div>
+      <textarea id="report-text" style="width:100%; height:260px; resize:vertical; padding:10px; font-family:inherit; border:1px solid var(--border); border-radius:4px; font-size:13px; line-height:1.6;"></textarea>
     </div>
   </div>
 </div>
@@ -2848,6 +2881,92 @@
 
       if (document.getElementById('sa-compare-toggle').checked) renderStatusComparison();
       renderWeaknessDiagnosis(uFilter, pFilter, lFilter, tFilter, sD, eD);
+  }
+
+  // --- 今日のハイライトと日報（表示中の日付・ログイン中のアカウント・全商材） ---
+  function buildDailyReport() {
+    const user = currentUser, date = currentDateStr;
+    const day = appData[user]?.[date] || {};
+    const t = getDayTotals(user, date);
+    let sec = 0; for (const p in day) sec += day[p].timerSeconds || 0;
+    if (isRunning && date === getTodayString() && currentProduct !== ALL_PRODUCTS_KEY) sec += Math.floor((Date.now() - startTime) / 1000);
+    const pct = (a, b) => b > 0 ? (a / b * 100).toFixed(1) + '%' : '-';
+    const hours = sec / 3600;
+
+    // 時間帯別（全商材）
+    const hCalls = Array(10).fill(0);
+    for (const p in day) { const h = day[p].hourly || {}; for (let i = 0; i < 10; i++) hCalls[i] += ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo'].reduce((a, k) => a + (h[k]?.[i] || 0), 0); }
+    const peak = hCalls.reduce((b, v, i) => v > hCalls[b] ? i : b, 0);
+    // リスト別・トーク別（全商材のセッションを合算）
+    const byList = {}, byTalk = {};
+    for (const p in day) for (const k in (day[p].sessionsByKey || {})) {
+      const s2 = day[p].sessionsByKey[k], c = s2.counts || [];
+      const calls = c.reduce((a, b) => a + (b || 0), 0), apo = c[9] || 0;
+      [[byList, s2.list], [byTalk, s2.talk]].forEach(([m, name]) => { if (name === UNSET_LABEL) return; m[name] = m[name] || { calls: 0, apo: 0 }; m[name].calls += calls; m[name].apo += apo; });
+    }
+    // 一番当たった：10件以上ならアポ率、なければアポ数
+    const bestOf = m => Object.entries(m).filter(([, v]) => v.apo > 0).sort((a, b) => ((b[1].calls >= 10 ? b[1].apo / b[1].calls : 0) - (a[1].calls >= 10 ? a[1].apo / a[1].calls : 0)) || b[1].apo - a[1].apo)[0];
+    const bestTalk = bestOf(byTalk), bestList = bestOf(byList);
+    // 自己ベスト
+    let prevBest = 0;
+    for (const d in (appData[user] || {})) if (d < date) prevBest = Math.max(prevBest, getDayTotals(user, d).calls);
+    const isBest = prevBest > 0 && t.calls > prevBest;
+    const streak = computeGoalStreak(user, date);
+    // 今日獲得したバッジ（前日までとの差）
+    const yest = new Date(`${date}T00:00:00`); yest.setDate(yest.getDate() - 1);
+    const before = computeBadges(user, formatDateStr(yest)), after = computeBadges(user, date);
+    const newBadges = BADGES.filter(b => after.has(b.key) && !before.has(b.key));
+    // 伸びしろ：今日の段階別通過率で、到達10件以上のうち最も低い段階
+    const sd = computeStatusAnalysisData(user, '__ALL_PRODUCTS__', '__ALL__', '__ALL__', date, date, false).stageDetails;
+    const weakest = sd.filter(s2 => s2.reach >= 10).map(s2 => ({ name: s2.name, rate: s2.passed / s2.reach * 100, reach: s2.reach })).sort((a, b) => a.rate - b.rate)[0];
+    const achieved = t.apo >= t.target;
+
+    const [y, m, d] = date.split('-');
+    const dow = '日月火水木金土'[new Date(`${date}T00:00:00`).getDay()];
+    const highlights = [
+      { cls: 'main', label: '今日の結果', val: `${t.calls}架電 ／ アポ${+t.apo.toFixed(1)}件`, sub: `目標 ${t.target}件${achieved ? '：達成🎉' : ''}` },
+      { label: '受付突破率 ／ 担当受注率', val: `${pct(t.connect, t.calls)} ／ ${pct(t.apo, t.connect)}`, sub: `アポ率 ${pct(t.apo, t.calls)}` },
+      { label: '稼働時間 ／ 架電数', val: `${hours.toFixed(1)}h ／ ${hours > 0 ? (t.calls / hours).toFixed(1) : '0.0'}件/h`, sub: '' },
+      { label: '最多架電の時間帯', val: hCalls[peak] > 0 ? `${HM_COLS[peak]}時` : '-', sub: hCalls[peak] > 0 ? `${hCalls[peak]}件` : '' },
+      { label: '一番当たったトーク', val: bestTalk ? bestTalk[0] : '-', sub: bestTalk ? `アポ${bestTalk[1].apo}件 ／ ${bestTalk[1].calls}架電` : 'トークを選んで架電すると集計されます', good: !!bestTalk },
+      { label: '一番当たったリスト', val: bestList ? bestList[0] : '-', sub: bestList ? `アポ${bestList[1].apo}件 ／ ${bestList[1].calls}架電` : 'リストを選んで架電すると集計されます', good: !!bestList },
+      { label: '自己ベスト', val: isBest ? `更新！ ${t.calls}件` : `${t.calls}件`, sub: prevBest ? `これまでの最高 ${prevBest}件` : '今日の記録が最初の自己ベスト', good: isBest },
+      { label: '連続記録・バッジ', val: streak.streak >= 2 ? `🔥 ${streak.streak}日連続達成` : (newBadges.length ? '新しいバッジ' : '-'), sub: newBadges.length ? '今日獲得：' + newBadges.map(b => `${b.icon} ${b.name}`).join(' ') : '', good: streak.streak >= 2 || newBadges.length > 0 },
+      { label: '明日の伸びしろ', val: weakest ? weakest.name : '-', sub: weakest ? `今日の通過率 ${weakest.rate.toFixed(1)}%（到達${weakest.reach}件）` : '到達10件以上の段階がありません' }
+    ];
+
+    const lines = [`【日報】${y}/${m}/${d}（${dow}）${user}`, '', '■ 結果',
+      `・架電 ${t.calls}件 ／ アポ ${+t.apo.toFixed(1)}件（目標 ${t.target}件${achieved ? '：達成🎉' : ''}）`,
+      `・受付突破率 ${pct(t.connect, t.calls)} ／ アポ率 ${pct(t.apo, t.calls)} ／ 担当受注率 ${pct(t.apo, t.connect)}`,
+      `・稼働 ${hours.toFixed(1)}h ／ 架電数 ${hours > 0 ? (t.calls / hours).toFixed(1) : '0.0'}件/h`, '', '■ 今日のハイライト'];
+    if (hCalls[peak] > 0) lines.push(`・最多架電の時間帯：${HM_COLS[peak]}時（${hCalls[peak]}件）`);
+    if (bestTalk) lines.push(`・一番当たったトーク：${bestTalk[0]}（アポ${bestTalk[1].apo}件／${bestTalk[1].calls}架電）`);
+    if (bestList) lines.push(`・一番当たったリスト：${bestList[0]}（アポ${bestList[1].apo}件／${bestList[1].calls}架電）`);
+    if (isBest) lines.push(`・自己ベスト更新：${t.calls}件（これまで ${prevBest}件）`);
+    if (streak.streak >= 2) lines.push(`・目標達成 ${streak.streak}日連続`);
+    newBadges.forEach(b => lines.push(`・バッジ獲得：${b.icon} ${b.name}`));
+    if (lines[lines.length - 1] === '■ 今日のハイライト') lines.push('・（特記事項なし）');
+    const prods = Object.keys(day).filter(p => (day[p].counts || []).some(v => v > 0));
+    if (prods.length) {
+      lines.push('', '■ 商材別');
+      prods.forEach(p => { const c = day[p].counts; lines.push(`・${p}：架電 ${c.reduce((a, b) => a + (b || 0), 0)}件 ／ アポ ${+(c[9] || 0).toFixed(1)}件`); });
+    }
+    const memos = Object.keys(day).filter(p => (day[p].memo || '').trim());
+    if (memos.length) { lines.push('', '■ メモ・申し送り'); memos.forEach(p => lines.push(`（${p}）${day[p].memo.trim()}`)); }
+    lines.push('', '■ 明日に向けて', weakest ? `・${weakest.name}の段階（今日の通過率 ${weakest.rate.toFixed(1)}%）を意識する` : '・（ここに一言）');
+    return { title: `${+m}/${+d}（${dow}）のハイライト`, highlights, text: lines.join('\n') };
+  }
+
+  function openDailyReport() {
+    const r = buildDailyReport();
+    document.getElementById('report-title').textContent = r.title;
+    document.getElementById('report-highlights').innerHTML = r.highlights.map(h => `<div class="hl-card ${h.cls || ''} ${h.good ? 'good' : ''}"><div class="hl-label">${h.label}</div><div class="hl-val">${escapeHTML(h.val)}</div>${h.sub ? `<div class="hl-sub">${escapeHTML(h.sub)}</div>` : ''}</div>`).join('');
+    document.getElementById('report-text').value = r.text;
+    document.getElementById('report-modal').style.display = 'flex';
+  }
+  function closeDailyReport() { document.getElementById('report-modal').style.display = 'none'; }
+  function copyDailyReport() {
+    navigator.clipboard.writeText(document.getElementById('report-text').value).then(() => showToast('日報をコピーしました', '#icon-doc'));
   }
 
   // --- 弱点診断（AIなし）：各段階の通過率を、同じ条件のチームメンバーの中央値と比べる ---
@@ -4558,7 +4677,10 @@
     const amCalls = callsIn(0, 3), pmCalls = callsIn(3, 9);
 
     let msg;
-    if (apo >= target) msg = ['🎉', `目標達成おめでとうございます！ここからは自己ベスト更新を狙いましょう`];
+    const endInfo = isToday ? getShiftEnd(currentUser, currentDateStr) : null;
+    const pastEnd = endInfo && (hour > endInfo.h || (hour === endInfo.h && new Date().getMinutes() >= endInfo.m));
+    if (pastEnd && tot > 0) msg = ['🌙', 'お疲れさまでした！今日のハイライトと日報を作成できます', 'report'];
+    else if (apo >= target) msg = ['🎉', `目標達成おめでとうございます！ここからは自己ベスト更新を狙いましょう`];
     else if (f && f.kind === 'forecast' && f.remainingHours > 0 && f.remainingHours <= 1) msg = ['⏰', `ラスト${Math.round(f.remainingHours * 60)}分！あと${+(target - apo).toFixed(1)}件、集中していきましょう`];
     else if (ratio && since.n >= ratio.value * 1.5) msg = ['🍀', `アポの間隔が空いていますが、平均で${ratio.value.toFixed(0)}架電に1件。確率的にはもうすぐです`];
     else if (isToday && hour >= 13 && amCalls >= 10 && pmCalls >= 10) {
@@ -4569,7 +4691,7 @@
     }
     else if (tot < 5) msg = ['☀️', `今日の目標はアポ${target}件。まずは最初の10コールでリズムを作りましょう`];
     else msg = ['👍', since.n > 0 ? `前回のアポから${since.n}件目。1件1件がアポに近づいています` : `${tot}件架電しました。1件1件がアポに近づいています`];
-    el.innerHTML = `<span class="coach-icon">${msg[0]}</span>${escapeHTML(msg[1])}`;
+    el.innerHTML = `<span class="coach-icon">${msg[0]}</span>${escapeHTML(msg[1])}${msg[2] === 'report' ? ' <button class="coach-link" onclick="openDailyReport()">今日のハイライトを見る</button>' : ''}`;
   }
   // 他の機能（切り返しトークの候補など）がコーチ欄を一時的に使うときの上書き
   let coachOverride = null;
