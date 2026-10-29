@@ -334,7 +334,7 @@
     .mini-stat-val { font-size: 14px; font-weight: 700; color: var(--text-main); }
 
     .mini-mode-tabs { display: flex; gap: 6px; flex-shrink: 0; }
-    .mini-tab-btn { flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: var(--text-muted); border-radius: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: 0.2s; }
+    .mini-tab-btn { flex: 1; min-width: 0; padding: 6px 2px; font-size: 11px; white-space: nowrap; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: var(--text-muted); border-radius: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: 0.2s; }
     .mini-tab-btn:hover { background: #f1f5f9; }
     .mini-tab-btn.active { background: var(--sidebar-bg); color: #fff; border-color: var(--sidebar-bg); }
     .mini-memo-textarea { width: 100%; flex: 1; min-height: 100px; resize: none; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-size: 12px; font-family: inherit; outline: none; box-sizing: border-box; }
@@ -486,6 +486,37 @@
     .mini-talk-area { flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
     .mini-talk-area input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
     .mini-tab-badge:not(:empty) { margin-left: 3px; background: #ef4444; color: #fff; border-radius: 8px; padding: 0 5px; font-size: 10px; }
+    /* 再架電リマインダー */
+    .cb-count:not(:empty) { background: #ef4444; color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; line-height: 17px; }
+    .cb-form { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .cb-form input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; font-family: inherit; }
+    .cb-form input:focus { border-color: var(--accent); }
+    .cb-form #cb-note { grid-column: span 1; }
+    .cb-hint { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+    .cb-hint button { border: 1px solid #cbd5e1; background: #fff; border-radius: 12px; padding: 1px 8px; font-size: 11px; cursor: pointer; margin-left: 4px; }
+    .cb-group { font-size: 11px; font-weight: 700; color: var(--text-muted); margin: 12px 0 6px; }
+    .cb-group.overdue { color: #b91c1c; }
+    .cb-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; background: #fff; }
+    .cb-item.overdue { border-color: #fca5a5; background: #fef2f2; }
+    .cb-item.done { opacity: 0.6; }
+    .cb-item.done .cb-company { text-decoration: line-through; }
+    .cb-time { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .cb-company { font-size: 13px; font-weight: 700; }
+    .cb-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .cb-actions { display: flex; gap: 4px; }
+    .cb-actions button { border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+    .cb-actions button.cb-done-btn { border-color: #99f6e4; color: var(--accent-hover); background: #f0fdfa; font-weight: 700; }
+    .cb-empty { font-size: 12px; color: var(--text-muted); text-align: center; padding: 16px; }
+    .mini-cb-area { flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
+    .mini-cb-form { display: grid; grid-template-columns: 1fr 76px auto; gap: 4px; }
+    .mini-cb-form input { min-width: 0; padding: 5px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
+    .mini-cb-list { flex: 1; min-height: 0; overflow-y: auto; }
+    .mini-cb-list .cb-item { padding: 6px 8px; gap: 6px; }
+    .mini-cb-list .cb-time, .mini-cb-list .cb-company { font-size: 12px; }
+    .cb-alert { flex-shrink: 0; background: #fef3c7; border: 1px solid #fcd34d; color: #78350f; border-radius: 6px; padding: 6px 8px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .cb-alert span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-widget.cb-alerting .mini-pace { display: none !important; }
+    .cb-alert button { border: 1px solid #d97706; background: #fff; color: #92400e; border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -601,6 +632,9 @@
 
         <button class="btn-settings-top" onclick="toggleMiniMode()" title="小さな別ウィンドウで表示（他のタブに切り替えても表示されます）">
           <svg class="icon" style="margin:0;"><use href="#icon-minimize"></use></svg>
+        </button>
+        <button class="btn-settings-top" id="btn-callbacks" onclick="openCallbackModal()" title="再架電リマインダー（自分のアカウントにのみ表示されます）">
+          <svg class="icon"><use href="#icon-bell"></use></svg> 再架電 <span class="cb-count" id="cb-count"></span>
         </button>
         <button class="btn-settings-top" onclick="openListTalkModal()" title="マイリスト・トーク管理（自分のアカウントにのみ表示されます）">
           <svg class="icon"><use href="#icon-clipboard"></use></svg> リスト/トーク
@@ -1288,6 +1322,7 @@
     <div class="mini-session-row single">
       <label><span class="mini-stat-label">商材</span><select id="mini-product-select" title="商材（本体の架電パネルと連動します）"></select></label>
     </div>
+    <div class="cb-alert" id="mini-cb-alert" style="display:none;"></div>
     <div id="mini-disabled-msg" class="mini-disabled-msg" style="display:none;">※全商材まとめ閲覧モードのため操作できません<br>上の「商材」で個別の商材を選ぶとカウントできます</div>
     <div id="mini-active-area" class="mini-active-area">
       <div class="mini-session-row">
@@ -1328,10 +1363,21 @@
         <button class="mini-tab-btn" id="mini-tab-talk" title="切り返しトークを検索">
           <svg class="icon" style="width:13px; height:13px;"><use href="#icon-message"></use></svg> 切り返し<span class="mini-tab-badge" id="mini-talk-badge"></span>
         </button>
+        <button class="mini-tab-btn" id="mini-tab-cb" title="再架電リマインダー">
+          <svg class="icon" style="width:13px; height:13px;"><use href="#icon-bell"></use></svg> 再架電<span class="mini-tab-badge" id="mini-cb-badge"></span>
+        </button>
       </div>
 
       <div class="mini-counter-grid" id="mini-counter-grid"></div>
       <textarea class="mini-memo-textarea" id="mini-memo-textarea" style="display:none;" placeholder="架電中に気づいたこと、次にかけるリストへの申し送りなどを自由にメモできます..."></textarea>
+      <div class="mini-cb-area" id="mini-cb-area" style="display:none;">
+        <div class="mini-cb-form">
+          <input type="text" id="mini-cb-company" placeholder="会社名">
+          <input type="time" id="mini-cb-time" title="今日のこの時刻に通知します（過ぎた時刻なら明日）">
+          <button class="btn btn-primary" id="mini-cb-add" style="padding:4px 8px; font-size:11px;">追加</button>
+        </div>
+        <div class="mini-cb-list" id="mini-cb-list"></div>
+      </div>
       <div class="mini-talk-area" id="mini-talk-area" style="display:none;">
         <input type="search" id="mini-counter-search" placeholder="断り文句で検索（例：忙しい）" autocomplete="off">
         <div class="counter-results mini" id="mini-counter-results"></div>
@@ -1387,6 +1433,26 @@
         </div>
         <div id="my-talks-list" style="display:flex; flex-direction:column; gap:12px;"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= モーダル (再架電リマインダー：アカウントごと) ================= -->
+<div id="callback-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:620px;">
+    <div class="modal-header">
+      <h2><svg class="icon"><use href="#icon-bell"></use></svg> 再架電リマインダー</h2>
+      <button class="btn-close" onclick="closeCallbackModal()"><svg class="icon" style="width:24px; height:24px;"><use href="#icon-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="cb-form">
+        <input type="text" id="cb-company" placeholder="会社名（例：株式会社〇〇）">
+        <input type="datetime-local" id="cb-at">
+        <input type="text" id="cb-note" placeholder="メモ（例：経理部長 田中様、月末は避ける）">
+        <button class="btn btn-primary" onclick="addCallbackFromModal()"><svg class="icon"><use href="#icon-plus"></use></svg> 登録</button>
+      </div>
+      <div id="cb-notify-hint" class="cb-hint"></div>
+      <div id="cb-list"></div>
     </div>
   </div>
 </div>
@@ -1682,6 +1748,7 @@
     }
 
     subscribeMyClaps();
+    subscribeCallbacks();
 
     if(personalListsTalksUnsubscribe) personalListsTalksUnsubscribe();
     if(db) {
@@ -1721,6 +1788,8 @@
     if(personalScriptUnsubscribe) { personalScriptUnsubscribe(); personalScriptUnsubscribe = null; }
     if(personalListsTalksUnsubscribe) { personalListsTalksUnsubscribe(); personalListsTalksUnsubscribe = null; }
     if(myClapsUnsubscribe) { myClapsUnsubscribe(); myClapsUnsubscribe = null; }
+    if(callbacksUnsubscribe) { callbacksUnsubscribe(); callbacksUnsubscribe = null; }
+    callbacks = []; renderCallbacks();
     listsList = []; talksList = []; currentList = ""; currentTalk = "";
     if (isMiniMode) closeMiniWindow();
     document.getElementById("main-app").style.display = "none";
@@ -2071,6 +2140,9 @@
     document.getElementById('mini-tab-count').addEventListener('click', () => switchMiniView('count'));
     document.getElementById('mini-tab-memo').addEventListener('click', () => switchMiniView('memo'));
     document.getElementById('mini-tab-talk').addEventListener('click', () => switchMiniView('talk'));
+    document.getElementById('mini-tab-cb').addEventListener('click', () => switchMiniView('cb'));
+    document.getElementById('mini-cb-add').addEventListener('click', addCallbackFromMini);
+    document.getElementById('mini-cb-company').addEventListener('keydown', e => { if (e.key === 'Enter') addCallbackFromMini(); });
     document.getElementById('mini-counter-search').addEventListener('input', () => renderCounterSearch(miniDoc, 'mini-counter-search', 'mini-counter-results', true));
     document.getElementById('mini-memo-textarea').addEventListener('input', (e) => scheduleMemoSave(e.target.value));
     // 小窓で商材／リスト／トークを変えたら本体の選択欄に反映し、本体で切り替えたときと同じ処理を通す
@@ -2108,6 +2180,9 @@
     miniDoc.getElementById('mini-counter-grid').style.display = mode === 'count' ? 'grid' : 'none';
     miniDoc.getElementById('mini-memo-textarea').style.display = mode === 'memo' ? 'block' : 'none';
     miniDoc.getElementById('mini-talk-area').style.display = mode === 'talk' ? 'flex' : 'none';
+    miniDoc.getElementById('mini-tab-cb').classList.toggle('active', mode === 'cb');
+    miniDoc.getElementById('mini-cb-area').style.display = mode === 'cb' ? 'flex' : 'none';
+    if (mode === 'cb') { miniDoc.getElementById('mini-cb-time').value ||= defaultCallbackTime().slice(11, 16); renderCallbacks(); }
     if (mode === 'talk') {
       miniDoc.getElementById('mini-talk-badge').textContent = '';
       renderCounterSearch(miniDoc, 'mini-counter-search', 'mini-counter-results', true);
@@ -3679,6 +3754,195 @@
   }
   let coachOverrideTimer = null;
 
+  // --- 再架電リマインダー（アカウントごと。他のメンバーには表示されない） ---
+  // kaden_callbacks/{ユーザー} に { items: [{ id, company, at: 'YYYY-MM-DDTHH:MM', note, product, list, talk, done, notified, createdAt }] } を保存
+  let callbacks = [];
+  let callbacksUnsubscribe = null;
+  function subscribeCallbacks() {
+    if (callbacksUnsubscribe) { callbacksUnsubscribe(); callbacksUnsubscribe = null; }
+    if (db) {
+      callbacksUnsubscribe = db.collection('kaden_callbacks').doc(currentUser).onSnapshot(doc => {
+        callbacks = (doc.exists && doc.data().items) || [];
+        renderCallbacks(); checkDueCallbacks();
+      });
+    } else {
+      try { callbacks = JSON.parse(localStorage.getItem('kaden_callbacks_' + currentUser)) || []; } catch (e) { callbacks = []; }
+      renderCallbacks(); checkDueCallbacks();
+    }
+  }
+  function saveCallbacks() {
+    if (db) db.collection('kaden_callbacks').doc(currentUser).set({ items: callbacks }, { merge: true });
+    else { try { localStorage.setItem('kaden_callbacks_' + currentUser, JSON.stringify(callbacks)); } catch (e) {} }
+    renderCallbacks();
+  }
+  // 'YYYY-MM-DDTHH:MM'（端末のローカル時刻）
+  function toLocalDateTimeStr(d) { return `${formatDateStr(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+  function defaultCallbackTime() {
+    const d = new Date(Date.now() + 60 * 60000);
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+    return toLocalDateTimeStr(d);
+  }
+
+  function addCallback(company, at, note) {
+    company = (company || '').trim();
+    if (!company) { showToast('会社名を入力してください'); return false; }
+    if (!at) { showToast('日時を入力してください'); return false; }
+    callbacks.push({
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, company, at, note: (note || '').trim(),
+      product: currentProduct === ALL_PRODUCTS_KEY ? '' : currentProduct, list: currentList || '', talk: currentTalk || '',
+      done: false, notified: false, createdAt: Date.now()
+    });
+    saveCallbacks();
+    requestNotifyPermission();
+    showToast(`再架電を登録しました：${escapeHTML(company)}（${formatCallbackTime(at)}）`, '#icon-bell');
+    return true;
+  }
+  function addCallbackFromModal() {
+    if (addCallback(document.getElementById('cb-company').value, document.getElementById('cb-at').value, document.getElementById('cb-note').value)) {
+      document.getElementById('cb-company').value = ''; document.getElementById('cb-note').value = '';
+      document.getElementById('cb-at').value = defaultCallbackTime();
+    }
+  }
+  // 小窓からは時刻だけ指定。今日のその時刻（過ぎていれば明日）にする
+  function addCallbackFromMini() {
+    const companyEl = miniDoc.getElementById('mini-cb-company'), timeEl = miniDoc.getElementById('mini-cb-time');
+    if (!timeEl.value) { showToast('時刻を入力してください'); return; }
+    const d = new Date(`${getTodayString()}T${timeEl.value}:00`);
+    if (d.getTime() < Date.now() - 60000) d.setDate(d.getDate() + 1);
+    if (addCallback(companyEl.value, toLocalDateTimeStr(d), '')) companyEl.value = '';
+  }
+  function setCallbackDone(id, done) {
+    const cb = callbacks.find(c => c.id === id);
+    if (!cb) return;
+    cb.done = done;
+    saveCallbacks();
+    hideCallbackAlert(id);
+  }
+  function deleteCallback(id) {
+    if (!confirm('このリマインダーを削除しますか？')) return;
+    callbacks = callbacks.filter(c => c.id !== id);
+    saveCallbacks();
+    hideCallbackAlert(id);
+  }
+  // 「10分後にもう一度」：時刻をずらして再通知させる
+  function snoozeCallback(id, minutes) {
+    const cb = callbacks.find(c => c.id === id);
+    if (!cb) return;
+    cb.at = toLocalDateTimeStr(new Date(Date.now() + minutes * 60000));
+    cb.notified = false;
+    saveCallbacks();
+    hideCallbackAlert(id);
+  }
+
+  function formatCallbackTime(at) {
+    const [date, time] = at.split('T');
+    const today = getTodayString();
+    const tm = new Date(`${today}T00:00:00`); tm.setDate(tm.getDate() + 1);
+    if (date === today) return `今日 ${time}`;
+    if (date === formatDateStr(tm)) return `明日 ${time}`;
+    return `${date.slice(5).replace('-', '/')} ${time}`;
+  }
+
+  function requestNotifyPermission() {
+    try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(renderCallbacks); } catch (e) {}
+  }
+
+  // 時刻になった（過ぎた）未完了・未通知のものを通知する。読み込み時に過ぎていたものも1回だけ通知
+  function checkDueCallbacks() {
+    const now = Date.now();
+    const due = callbacks.filter(c => !c.done && !c.notified && new Date(`${c.at}:00`).getTime() <= now);
+    if (!due.length) { renderCallbacks(); return; }
+    due.forEach(c => {
+      c.notified = true;
+      const body = `${c.company}（${formatCallbackTime(c.at)}）${c.note ? '　' + c.note : ''}`;
+      showToast(`⏰ 再架電の時間です：${escapeHTML(body)}`, '#icon-bell', { label: '完了にする', doneLabel: '完了しました', onClick: () => setCallbackDone(c.id, true) });
+      showCallbackAlert(c);
+      try { if ('Notification' in window && Notification.permission === 'granted') new Notification('再架電の時間です', { body, tag: 'kaden-cb-' + c.id }); } catch (e) {}
+    });
+    saveCallbacks();
+  }
+
+  // 小窓の上部に出す通知帯（全商材まとめ中でも見える位置）
+  function showCallbackAlert(c) {
+    if (!isMiniMode) return;
+    const el = miniDoc.getElementById('mini-cb-alert');
+    el.dataset.id = c.id;
+    el.innerHTML = '';
+    const text = miniDoc.createElement('span'); text.textContent = `⏰ 再架電：${c.company}（${c.at.slice(11)}）`;
+    const done = miniDoc.createElement('button'); done.textContent = '完了'; done.addEventListener('click', () => setCallbackDone(c.id, true));
+    const later = miniDoc.createElement('button'); later.textContent = '10分後'; later.addEventListener('click', () => snoozeCallback(c.id, 10));
+    text.title = text.textContent + (c.note ? `　${c.note}` : '');
+    el.append(text, done, later);
+    el.style.display = 'flex';
+    miniWidgetEl.classList.add('cb-alerting');
+  }
+  function hideCallbackAlert(id) {
+    if (!isMiniMode) return;
+    const el = miniDoc.getElementById('mini-cb-alert');
+    if (el && el.dataset.id === id) { el.style.display = 'none'; miniWidgetEl.classList.remove('cb-alerting'); }
+  }
+
+  function openCallbackModal() {
+    document.getElementById('cb-at').value = defaultCallbackTime();
+    renderCallbacks();
+    document.getElementById('callback-modal').style.display = 'flex';
+    document.getElementById('cb-company').focus();
+  }
+  function closeCallbackModal() { document.getElementById('callback-modal').style.display = 'none'; }
+
+  // 一覧（期限切れ／今日／明日以降／完了済み）を、本体のモーダルと小窓に描画する
+  function renderCallbacks() {
+    const now = Date.now(), today = getTodayString();
+    const open = callbacks.filter(c => !c.done).sort((a, b) => a.at.localeCompare(b.at));
+    const overdue = open.filter(c => new Date(`${c.at}:00`).getTime() <= now);
+    const todayItems = open.filter(c => !overdue.includes(c) && c.at.slice(0, 10) === today);
+    const later = open.filter(c => !overdue.includes(c) && c.at.slice(0, 10) > today);
+    const done = callbacks.filter(c => c.done).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
+    const badge = overdue.length + todayItems.length;
+
+    const countEl = document.getElementById('cb-count');
+    if (countEl) { countEl.textContent = badge ? String(badge) : ''; countEl.title = overdue.length ? `期限切れ ${overdue.length}件` : ''; }
+    if (isMiniMode) { const mb = miniDoc.getElementById('mini-cb-badge'); if (mb) mb.textContent = overdue.length ? String(overdue.length) : ''; }
+
+    const hint = document.getElementById('cb-notify-hint');
+    if (hint) {
+      const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+      hint.innerHTML = perm === 'granted' ? '時間になると、この画面・小窓・ブラウザの通知でお知らせします。'
+        : perm === 'denied' ? 'ブラウザの通知はブロックされています（この画面と小窓ではお知らせします）。'
+        : perm === 'unsupported' ? 'このブラウザは通知に対応していません（この画面と小窓ではお知らせします）。'
+        : '時間になるとこの画面と小窓でお知らせします。<button onclick="requestNotifyPermission()">ブラウザの通知も受け取る</button>';
+    }
+
+    const build = (doc, container, compact) => {
+      if (!container) return;
+      container.innerHTML = '';
+      const group = (title, list, cls) => {
+        if (!list.length) return;
+        const h = doc.createElement('div'); h.className = `cb-group ${cls || ''}`; h.textContent = `${title}（${list.length}）`;
+        container.appendChild(h);
+        list.forEach(c => {
+          const item = doc.createElement('div');
+          item.className = `cb-item ${cls || ''}${c.done ? ' done' : ''}`;
+          const sub = [c.note, [c.product, c.list, c.talk].filter(Boolean).join(' / ')].filter(Boolean).join('　');
+          item.innerHTML = `<div class="cb-time">${escapeHTML(formatCallbackTime(c.at))}</div><div style="min-width:0;"><div class="cb-company">${escapeHTML(c.company)}</div>${sub && !compact ? `<div class="cb-sub">${escapeHTML(sub)}</div>` : ''}</div><div class="cb-actions"></div>`;
+          const actions = item.querySelector('.cb-actions');
+          const mk = (label, cls2, fn) => { const b = doc.createElement('button'); b.textContent = label; if (cls2) b.className = cls2; b.addEventListener('click', fn); actions.appendChild(b); };
+          if (c.done) mk('戻す', '', () => setCallbackDone(c.id, false));
+          else mk('完了', 'cb-done-btn', () => setCallbackDone(c.id, true));
+          if (!compact) mk('削除', '', () => deleteCallback(c.id));
+          container.appendChild(item);
+        });
+      };
+      group('期限切れ・時間になったもの', overdue, 'overdue');
+      group('今日', todayItems);
+      group('明日以降', later);
+      if (!compact) group('完了済み（直近10件）', done);
+      if (!open.length && (compact || !done.length)) container.innerHTML = '<div class="cb-empty">登録されている再架電はありません</div>';
+    };
+    build(document, document.getElementById('cb-list'), false);
+    if (isMiniMode) build(miniDoc, miniDoc.getElementById('mini-cb-list'), true);
+  }
+
   // --- 架電ログ・取り消し ---
   function hourColOfTime(ts) { const h = new Date(ts).getHours(); return (h >= 9 && h <= 17) ? h - 9 : 9; }
   function itemShortName(id) { return items[id].name.replace(/^└\s*/, ''); }
@@ -4640,6 +4904,8 @@
     init(); initMiniWidgetHandlers(); document.addEventListener('keydown', handleCountShortcut);
     // ペース予測の「残り時間」は時刻とともに変わるため、タイマー停止中も1分ごとに更新する
     setInterval(() => { if (currentUser && document.getElementById('page-counter').style.display !== 'none') renderPaceForecast(); }, 60000);
+    // 再架電の時刻になったものを30秒ごとに確認して通知する
+    setInterval(() => { if (currentUser) checkDueCallbacks(); }, 30000);
   };
 </script>
 </body>
