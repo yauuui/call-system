@@ -30,17 +30,18 @@
     :root {
       --sidebar-bg: #2a333e;      
       --sidebar-hover: #1f262e;
-      --accent: #14b8a6;          
-      --accent-hover: #0d9488;
+      --accent: #0f766e;          /* 文字・ボタン用（白地で 5.5:1） */
+      --accent-hover: #115e59;
+      --accent-bright: #14b8a6;   /* ゲージ・枠線など文字以外の飾り用 */
       --main-bg: #f3f4f6;         
       --card-bg: #ffffff;
       --text-main: #334155;
-      --text-muted: #64748b;
+      --text-muted: #475569;
       --border: #e2e8f0;
       --table-th-bg: #475569;     
       --table-th-border: #64748b;
-      --success: #14b8a6;
-      --danger: #ef4444;
+      --success: #0f766e;
+      --danger: #dc2626;
       --warning: #f59e0b;
       --radius: 6px;              
       --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
@@ -175,17 +176,17 @@
     .stepper button:active { background: #cbd5e1; }
     .stepper .val { width: 44px; text-align: center; font-size: 15px; font-weight: 700; color: var(--text-main); border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; background: #fff; display: flex; align-items: center; justify-content: center; height: 34px; }
     .apo-box { background-color: #f0fdf4 !important; border-color: #86efac !important; }
-    .apo-box .c-label { color: #059669; }
+    .apo-box .c-label { color: #047857; }
 
     /* キーボードショートカット（キー表示・押下時のハイライト） */
     .kb-hint { display: inline-block; min-width: 16px; padding: 0 4px; margin-right: 6px; border: 1px solid #cbd5e1; border-bottom-width: 2px; border-radius: 3px; background: #f8fafc; color: var(--text-muted); font-size: 10px; font-weight: 700; line-height: 15px; text-align: center; font-family: inherit; vertical-align: 1px; }
     .mini-counter-item .kb-hint { min-width: 12px; padding: 0 2px; margin-right: 3px; font-size: 9px; line-height: 11px; }
     .kb-flash { animation: kbFlash 0.4s ease-out; }
     @keyframes kbFlash { from { box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.6); border-color: var(--accent); } to { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); } }
-    .apo-box .stepper { border-color: #059669; }
-    .apo-box .stepper button { background: #059669; color: white; }
+    .apo-box .stepper { border-color: #047857; }
+    .apo-box .stepper button { background: #047857; color: white; }
     .apo-box .stepper button:hover { background: #047857; }
-    .apo-box .stepper .val { border-color: #059669; color: #059669; }
+    .apo-box .stepper .val { border-color: #047857; color: #047857; }
 
     .rank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 600px) { .rank-grid { grid-template-columns: 1fr; } }
@@ -207,7 +208,7 @@
     tbody td:first-child { text-align: left; }
     tbody td:last-child { border-right: none; }
     .row-total td { background-color: #f1f5f9; font-weight: 700; color: var(--text-main); border-top: 2px solid var(--border); }
-    .row-success td { background-color: #f0fdf4; color: #059669; font-weight: 600; }
+    .row-success td { background-color: #f0fdf4; color: #047857; font-weight: 600; }
 
     /* KPIテーブルスタイル */
     .kpi-table { border-collapse: separate; border-spacing: 0; white-space: nowrap; font-size: 12px; width: 100%; }
@@ -231,8 +232,8 @@
     .modal-body { padding: 25px; overflow-y: auto; }
     .settings-list { list-style: none; padding: 0; margin: 0 0 15px 0; border: 1px solid var(--border); max-height: 150px; overflow-y: auto; border-radius: var(--radius); }
     .settings-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-weight: 600; }
-    .btn-del { background: #fee2e2; color: #ef4444; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;}
-    .btn-del:hover { background: #ef4444; color: white; }
+    .btn-del { background: #fee2e2; color: #b91c1c; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;}
+    .btn-del:hover { background: #dc2626; color: white; }
     .add-group { display: flex; gap: 8px; margin-bottom: 25px; }
     .add-group input { flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; border-radius: 4px; }
     .add-group button { background: var(--sidebar-bg); color: white; border: none; padding: 0 15px; cursor: pointer; font-size: 13px; border-radius: 4px; font-weight: 600; }
@@ -368,7 +369,8 @@
     .counter-toolbar .filters { gap: 10px; flex-wrap: nowrap; }
     .counter-toolbar .action-btns { gap: 6px; flex-wrap: nowrap; }
     .counter-toolbar .filter-group { gap: 6px; }
-    .counter-toolbar .filter-group select, .counter-toolbar .filter-group input { min-width: 0; width: 112px; padding: 6px 8px; }
+    .counter-toolbar .filter-group select, .counter-toolbar .filter-group input { min-width: 0; width: 106px; padding: 6px 8px; }
+    .counter-toolbar #date-picker { width: 132px; }
     .counter-toolbar .btn { padding: 6px 10px; font-size: 12px; }
 
     .status-band { flex-direction: row; align-items: stretch; flex-wrap: wrap; }
@@ -422,10 +424,10 @@
     .flow-step.pre .stepper button.plus { background: #f8fafc; color: var(--text-main); border-color: #cbd5e1; }
     .flow-step.pre .stepper button.plus:hover { background: #e2e8f0; }
     .flow-step.apo-box .val { color: #047857; }
-    .flow-step.apo-box .stepper button { border-color: #059669; }
+    .flow-step.apo-box .stepper button { border-color: #047857; }
     .flow-step.apo-box .stepper button.minus { background: #fff; color: #047857; }
     .flow-step.apo-box .stepper button.minus:hover { background: #ecfdf5; }
-    .flow-step.apo-box .stepper button.plus { background: #059669; color: #fff; }
+    .flow-step.apo-box .stepper button.plus { background: #047857; color: #fff; }
     .flow-step.apo-box .stepper button.plus:hover { background: #047857; }
 
     .counter-details > summary { cursor: pointer; list-style: none; border-radius: var(--radius); }
@@ -445,7 +447,7 @@
     .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 10002; }
     .confetti-piece { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: 0.95; animation: confettiFall var(--dur) cubic-bezier(.25,.6,.4,1) forwards; }
     @keyframes confettiFall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: 0.9; } }
-    .apo-burst { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.6); background: #059669; color: #fff; font-size: 26px; font-weight: 700; padding: 14px 28px; border-radius: 40px; box-shadow: 0 12px 30px -6px rgba(5, 150, 105, 0.6); pointer-events: none; z-index: 10003; animation: apoBurst 1.3s ease-out forwards; white-space: nowrap; }
+    .apo-burst { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.6); background: #047857; color: #fff; font-size: 26px; font-weight: 700; padding: 14px 28px; border-radius: 40px; box-shadow: 0 12px 30px -6px rgba(5, 150, 105, 0.6); pointer-events: none; z-index: 10003; animation: apoBurst 1.3s ease-out forwards; white-space: nowrap; }
     @keyframes apoBurst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
     /* コーチ欄（声かけ）・連続記録・成長カード・バッジ */
     .coach-box { flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; padding: 8px 14px; text-align: left; }
@@ -493,9 +495,9 @@
     .coach-suggest .cs-neg { color: #991b1b; }
     .mini-talk-area { flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
     .mini-talk-area input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
-    .mini-tab-badge:not(:empty) { margin-left: 3px; background: #ef4444; color: #fff; border-radius: 8px; padding: 0 5px; font-size: 10px; }
+    .mini-tab-badge:not(:empty) { margin-left: 3px; background: #dc2626; color: #fff; border-radius: 8px; padding: 0 5px; font-size: 10px; }
     /* 再架電リマインダー */
-    .cb-count:not(:empty) { background: #ef4444; color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; line-height: 17px; }
+    .cb-count:not(:empty) { background: #dc2626; color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; line-height: 17px; }
     .cb-form { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; margin-bottom: 8px; }
     .cb-form input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; font-family: inherit; }
     .cb-form input:focus { border-color: var(--accent); }
@@ -3727,14 +3729,14 @@
         <th rowspan="2" style="width:60px;">全体目標<br><input type="number" step="0.5" class="kpi-input" style="font-size:14px; font-weight:bold; color:var(--accent); width:50px; background:#fff;" value="${totalTarget}" onchange="updateKpiGlobalTarget(this.value)"></th>
         <th rowspan="2" style="width:60px;">全体予想<br><span style="font-size:14px;">${totalExpected.toFixed(1)}</span></th>
         <th rowspan="2" style="width:60px;">全体実績<br><span style="font-size:14px;">${totalActual.toFixed(1)}</span></th>
-        <th rowspan="2" style="width:60px; border-right:2px solid var(--border);">進捗<br><span style="font-size:14px; color:${prog>=100?'var(--success)':'var(--danger)'}">${prog}%</span></th>
+        <th rowspan="2" style="width:60px; border-right:2px solid var(--border);">進捗<br><span style="font-size:14px; color:${prog>=100?'#a7f3d0':'#fecaca'}">${prog}%</span></th>
     `;
     
     const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'];
     for(let d=1; d<=daysInMonth; d++) {
         let dateObj = new Date(year, month-1, d);
         let dow = dayOfWeekStr[dateObj.getDay()];
-        let color = dow === '土' ? '#60a5fa' : (dow === '日' ? '#f87171' : '#fff');
+        let color = dow === '土' ? '#bfdbfe' : (dow === '日' ? '#fecaca' : '#fff');
         headHtml += `<th colspan="4" style="color:${color}; border-left:2px solid #94a3b8;">${month}/${d} (${dow})</th>`;
     }
     headHtml += `</tr><tr>`;
