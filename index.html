@@ -53,6 +53,24 @@
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
     /* トースト通知 */
+    /* 取り消しバー（直前のカウント操作を元に戻す） */
+    #undo-bar { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1e293b; color: #fff; border-radius: 8px; padding: 10px 12px 10px 16px; display: none; align-items: center; gap: 14px; font-size: 13px; font-weight: 600; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.35); z-index: 10001; }
+    #undo-bar.show { display: flex; }
+    #undo-bar button { background: transparent; border: 1px solid #5eead4; color: #5eead4; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    #undo-bar button:hover { background: rgba(94, 234, 212, 0.15); }
+    #undo-bar kbd { font-family: inherit; font-size: 10px; opacity: 0.8; }
+
+    /* 今日の架電履歴 */
+    .call-log-list { max-height: 260px; overflow-y: auto; font-size: 12px; }
+    .call-log-row { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid #f1f5f9; }
+    .call-log-row .cl-time { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .call-log-row .cl-item { font-weight: 700; color: var(--text-main); }
+    .call-log-row .cl-sub { color: var(--text-muted); font-size: 11px; margin-left: 6px; font-weight: 400; }
+    .call-log-row .cl-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .call-log-row.cl-apo .cl-item { color: #047857; }
+    .call-log-row.cl-minus .cl-delta { color: #b91c1c; }
+    .since-apo { white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--text-main); background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px; padding: 3px 10px; }
+
     #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10000; }
     .toast { background: #fff; border-left: 4px solid var(--accent); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 15px 20px; border-radius: 4px; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 4.5s forwards; font-weight: 700; font-size: 14px; color: var(--text-main); }
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -371,6 +389,7 @@
   <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
   <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></symbol>
   <symbol id="icon-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></symbol>
+  <symbol id="icon-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v2M3 10l5-5M3 10l5 5" /></symbol>
   <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></symbol>
 </svg>
 
@@ -380,6 +399,10 @@
 </div>
 
 <div id="toast-container"></div>
+<div id="undo-bar" role="status" aria-live="polite">
+  <span id="undo-bar-text"></span>
+  <button type="button" id="undo-bar-btn" onclick="undoLastCall()"><svg class="icon" style="width:14px; height:14px;"><use href="#icon-undo"></use></svg> 元に戻す <kbd>Ctrl+Z</kbd></button>
+</div>
 
 <div id="login-screen">
   <div class="login-card">
@@ -603,8 +626,8 @@
             <div class="card" style="position:relative;">
               <div id="panel-disabled-msg" class="overlay-msg" style="border-radius:var(--radius);">※全商材まとめ閲覧モード<br>（入力不可）</div>
               <div class="card-header">
-                <span>架電入力パネル</span>
-                <span style="font-size:11px; font-weight:600; color:var(--text-muted);">キーボード: <kbd class="kb-hint" style="margin:0 2px;">1</kbd>〜<kbd class="kb-hint" style="margin:0 2px;">0</kbd>で＋1 ／ <kbd class="kb-hint" style="margin:0 2px;">Shift</kbd>＋数字で−1</span>
+                <span style="display:flex; align-items:center; gap:10px;">架電入力パネル <span class="since-apo" id="since-apo" title="今日の架電のうち、直前のアポ獲得の後に何件目か"></span></span>
+                <span style="font-size:11px; font-weight:600; color:var(--text-muted); white-space:nowrap;"><kbd class="kb-hint" style="margin:0 2px;">1</kbd>〜<kbd class="kb-hint" style="margin:0 2px;">0</kbd>＋1　<kbd class="kb-hint" style="margin:0 2px;">Shift</kbd>−1　<kbd class="kb-hint" style="margin:0 2px;">Ctrl+Z</kbd>取消</span>
               </div>
               <div class="card-body" style="padding:15px;">
                 <div id="controls-grid" class="counter-grid">
@@ -635,6 +658,16 @@
           </div>
         </div>
         
+        <div class="card">
+          <div class="card-header">
+            <span>今日の架電履歴 <span id="call-log-count" style="font-weight:600; color:var(--text-muted); font-size:12px;"></span></span>
+            <button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="undoLastCall()" title="直前の操作を取り消す（Ctrl+Z）"><svg class="icon" style="width:14px; height:14px;"><use href="#icon-undo"></use></svg> 直前を取り消す</button>
+          </div>
+          <div class="card-body" style="padding:6px 15px 10px;">
+            <div class="call-log-list" id="call-log-list"></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">本日のメンバーランキング (速報)</div>
           <div class="card-body" style="padding: 15px;">
@@ -1108,6 +1141,7 @@
         <button class="btn btn-primary btn-icon-only" id="mini-btn-start" title="開始"><svg class="icon"><use href="#icon-play"></use></svg></button>
         <button class="btn btn-outline btn-icon-only" id="mini-btn-stop" style="background:#f59e0b; color:#fff; border:none;" title="停止"><svg class="icon"><use href="#icon-pause"></use></svg></button>
         <button class="btn btn-outline btn-icon-only" id="mini-btn-reset" title="クリア"><svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg></button>
+        <button class="btn btn-outline btn-icon-only" id="mini-btn-undo" title="直前のカウントを取り消す（Ctrl+Z）"><svg class="icon" style="color:#64748b;"><use href="#icon-undo"></use></svg></button>
       </div>
 
       <div class="mini-stats-row">
@@ -1649,6 +1683,16 @@
   const COUNT_SHORTCUT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
   function handleCountShortcut(e) {
+    // Ctrl+Z / ⌘+Z：直前のカウント操作を取り消す（入力欄では通常の文字の取り消しを優先）
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z') && !e.isComposing) {
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (!currentUser) return;
+      if (!isMiniMode && document.getElementById('page-counter').style.display === 'none') return;
+      e.preventDefault();
+      undoLastCall();
+      return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing) return;
     // Shift押下時は e.key が記号になるため、物理キーの e.code で判定する（テンキーも可）
     const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || '');
@@ -1803,6 +1847,7 @@
     document.getElementById('mini-btn-start').addEventListener('click', () => startTimer());
     document.getElementById('mini-btn-stop').addEventListener('click', () => stopTimer());
     document.getElementById('mini-btn-reset').addEventListener('click', () => resetTimer());
+    document.getElementById('mini-btn-undo').addEventListener('click', () => undoLastCall());
     document.getElementById('mini-tab-count').addEventListener('click', () => switchMiniView('count'));
     document.getElementById('mini-tab-memo').addEventListener('click', () => switchMiniView('memo'));
     document.getElementById('mini-memo-textarea').addEventListener('input', (e) => scheduleMemoSave(e.target.value));
@@ -3188,7 +3233,87 @@
     sess.counts[id] = Math.max(0, (sess.counts[id]||0) + actualDelta);
     applyHourlyDelta(sess.hourly, id, c, actualDelta);
 
+    // 1件ずつの架電ログ（いつ・どの項目を・どのリスト/トークで ±いくつ）。合計値(counts/hourly/sessionsByKey)と並行して残す
+    if (!state.callLog) state.callLog = [];
+    const entry = { t: Date.now(), id, d: actualDelta, l: currentList || UNSET_LABEL, k: currentTalk || UNSET_LABEL };
+    state.callLog.push(entry);
+
     saveData(); render();
+    showUndoBar(entry);
+  }
+
+  // --- 架電ログ・取り消し ---
+  function hourColOfTime(ts) { const h = new Date(ts).getHours(); return (h >= 9 && h <= 17) ? h - 9 : 9; }
+  function itemShortName(id) { return items[id].name.replace(/^└\s*/, ''); }
+
+  // 直前のカウント操作（表示中の日付・商材のログの最後の1件）を取り消す。
+  // 記録したときの時間帯列・リスト/トークに対して逆の増減をかけるので、時間帯別・リスト/トーク別の内訳も正しく戻る
+  function undoLastCall() {
+    if (currentProduct === ALL_PRODUCTS_KEY) { showToast('全商材まとめ表示中は取り消しできません'); return; }
+    const state = appData[currentUser]?.[currentDateStr]?.[currentProduct];
+    const entry = state?.callLog?.length ? state.callLog[state.callLog.length - 1] : null;
+    if (!entry) { showToast('取り消せる操作がありません', '#icon-undo'); return; }
+    state.callLog.pop();
+    const d = -entry.d, c = hourColOfTime(entry.t);
+    state.counts[entry.id] = Math.max(0, (state.counts[entry.id] || 0) + d);
+    applyHourlyDelta(state.hourly, entry.id, c, d);
+    const sess = ensureSession(state, entry.l === UNSET_LABEL ? '' : entry.l, entry.k === UNSET_LABEL ? '' : entry.k);
+    sess.counts[entry.id] = Math.max(0, (sess.counts[entry.id] || 0) + d);
+    applyHourlyDelta(sess.hourly, entry.id, c, d);
+    saveData(); render();
+    showUndoBar(entry, true);
+  }
+
+  let undoBarTimer = null;
+  // 記録したとき：「◯◯ +1 を記録しました [元に戻す]」／取り消したとき：「取り消しました：◯◯ +1」（続けて取り消すこともできる）
+  function showUndoBar(entry, undone = false) {
+    const label = `${itemShortName(entry.id)} ${entry.d > 0 ? '+' : '−'}${Math.abs(entry.d)}`;
+    document.getElementById('undo-bar-text').textContent = undone ? `取り消しました：${label}` : `${label} を記録しました`;
+    document.getElementById('undo-bar-btn').innerHTML = `<svg class="icon" style="width:14px; height:14px;"><use href="#icon-undo"></use></svg> ${undone ? 'さらに取り消す' : '元に戻す'} <kbd>Ctrl+Z</kbd>`;
+    document.getElementById('undo-bar').classList.add('show');
+    clearTimeout(undoBarTimer);
+    undoBarTimer = setTimeout(hideUndoBar, 4000);
+  }
+  function hideUndoBar() { clearTimeout(undoBarTimer); document.getElementById('undo-bar').classList.remove('show'); }
+
+  // 表示中の日付の架電ログ（全商材まとめなら全商材分を時刻順に合わせる）
+  function getActiveCallLog() {
+    const day = appData[currentUser]?.[currentDateStr] || {};
+    if (currentProduct !== ALL_PRODUCTS_KEY) return (day[currentProduct]?.callLog || []).map(e => ({ ...e, p: currentProduct }));
+    const all = [];
+    for (const p in day) (day[p].callLog || []).forEach(e => all.push({ ...e, p }));
+    return all.sort((a, b) => a.t - b.t);
+  }
+
+  // 直前のアポ獲得の後に何件目の架電か（アポ以外の項目を1件と数え、−操作は差し引く）
+  function computeCallsSinceApo(log) {
+    let n = 0, hasApo = false;
+    log.forEach(e => {
+      if (e.id === 9 && e.d > 0) { n = 0; hasApo = true; }
+      else if (e.id !== 9) n += e.d > 0 ? 1 : -1;
+    });
+    return { n: Math.max(0, n), hasApo };
+  }
+
+  function renderCallLog() {
+    const log = getActiveCallLog();
+    const since = computeCallsSinceApo(log);
+    const sinceEl = document.getElementById('since-apo');
+    if (sinceEl) {
+      sinceEl.style.display = log.length ? 'inline-block' : 'none';
+      sinceEl.textContent = since.hasApo ? `前回のアポから ${since.n}件目` : `今日はまだアポなし（${since.n}件目）`;
+    }
+    const listEl = document.getElementById('call-log-list');
+    if (!listEl) return;
+    document.getElementById('call-log-count').textContent = log.length ? `（${log.length}操作）` : '';
+    if (!log.length) { listEl.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-muted);">まだ記録がありません（この機能の追加後にカウントした分から表示されます）</div>'; return; }
+    const isAll = currentProduct === ALL_PRODUCTS_KEY;
+    listEl.innerHTML = log.slice().reverse().map(e => {
+      const time = new Date(e.t).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const sub = [isAll ? e.p : null, e.l !== UNSET_LABEL ? e.l : null, e.k !== UNSET_LABEL ? e.k : null].filter(Boolean).map(escapeHTML).join(' / ');
+      const cls = `call-log-row${e.id === 9 ? ' cl-apo' : ''}${e.d < 0 ? ' cl-minus' : ''}`;
+      return `<div class="${cls}"><span class="cl-time">${time}</span><span><span class="cl-item">${escapeHTML(itemShortName(e.id))}</span>${sub ? `<span class="cl-sub">${sub}</span>` : ''}</span><span class="cl-delta">${e.d > 0 ? '+' : '−'}${Math.abs(e.d)}</span></div>`;
+    }).join('');
   }
 
   function getMedalHTML(index) {
@@ -3414,6 +3539,7 @@
     updateRankings();
     renderMini();
     renderPaceForecast();
+    renderCallLog();
   }
 
   // --- 当日のペース予測 ---
