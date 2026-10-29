@@ -438,6 +438,32 @@
     @keyframes confettiFall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: 0.9; } }
     .apo-burst { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.6); background: #059669; color: #fff; font-size: 26px; font-weight: 700; padding: 14px 28px; border-radius: 40px; box-shadow: 0 12px 30px -6px rgba(5, 150, 105, 0.6); pointer-events: none; z-index: 10003; animation: apoBurst 1.3s ease-out forwards; white-space: nowrap; }
     @keyframes apoBurst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+    /* コーチ欄（声かけ）・連続記録・成長カード・バッジ */
+    .coach-box { flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; padding: 8px 14px; text-align: left; }
+    .coach-msg { font-size: 13px; font-weight: 700; color: var(--text-main); line-height: 1.5; }
+    .coach-msg .coach-icon { margin-right: 4px; }
+    .coach-guide { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .streak-chip { margin-left: auto; font-size: 11px; color: #b45309; background: #fef3c7; border-radius: 10px; padding: 0 8px; font-weight: 700; white-space: nowrap; }
+    .streak-chip:empty { display: none; }
+    .growth-body { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; }
+    .growth-title { font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+    .weekly-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 7px 10px; border-radius: 6px; font-size: 12px; margin-bottom: 4px; background: #f8fafc; }
+    .weekly-row.up { background: #f0fdf4; }
+    .weekly-row .w-label { font-weight: 700; }
+    .weekly-row .w-val { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+    .weekly-row .w-delta { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 72px; text-align: right; }
+    .weekly-row.up .w-delta { color: #047857; }
+    .weekly-row.down .w-delta { color: #92400e; }
+    .weekly-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .badge-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .badge { border: 1px solid var(--border); border-radius: 8px; padding: 8px 6px; text-align: center; background: #fff; }
+    .badge .b-icon { font-size: 22px; line-height: 1.2; }
+    .badge .b-name { font-size: 11px; font-weight: 700; margin-top: 2px; }
+    .badge .b-cond { font-size: 10px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+    .badge.locked { background: #f8fafc; }
+    .badge.locked .b-icon { filter: grayscale(1); opacity: 0.35; }
+    .badge.locked .b-name { color: var(--text-muted); }
+    .badge.earned { border-color: #fcd34d; background: #fffbeb; }
   </style>
 </head>
 <body>
@@ -661,7 +687,7 @@
             <div class="moti-sub" id="next-apo-sub"></div>
           </div>
           <div class="moti-tile" id="self-best-tile">
-            <div class="moti-head"><svg class="icon"><use href="#icon-trend"></use></svg> 自己ベスト（1日の架電数）</div>
+            <div class="moti-head"><svg class="icon"><use href="#icon-trend"></use></svg> 自己ベスト（1日の架電数） <span class="streak-chip" id="streak-chip"></span></div>
             <div class="moti-main" id="self-best-text">-</div>
             <div class="moti-gauge"><div class="moti-gauge-fill best" id="self-best-fill" style="width:0%;"></div></div>
             <div class="moti-sub" id="self-best-sub"></div>
@@ -683,6 +709,24 @@
           </div>
           <div class="card-body" style="padding:12px 16px 14px;">
             <div id="controls-grid" class="flow-panel"></div>
+          </div>
+        </div>
+
+        <!-- あなたの成長：今週と先週の比較・バッジ -->
+        <div class="card" id="growth-card">
+          <div class="card-header">
+            <span style="display:flex; align-items:center; gap:6px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-trend"></use></svg> あなたの成長</span>
+            <span style="font-size:11px; font-weight:600; color:var(--text-muted);">比べる相手は、先週の自分です</span>
+          </div>
+          <div class="card-body growth-body">
+            <div>
+              <div class="growth-title" id="weekly-title">今週 vs 先週</div>
+              <div id="weekly-review"></div>
+            </div>
+            <div>
+              <div class="growth-title">バッジ <span id="badge-count" style="font-weight:600; color:var(--text-muted);"></span></div>
+              <div class="badge-grid" id="badge-grid"></div>
+            </div>
           </div>
         </div>
 
@@ -1850,7 +1894,10 @@
       <div class="flow-group-label">担当につながる前に終わった</div>
       <div class="flow-row pre">
         ${FLOW_PRE_IDS.map(id => stepHTML(id, 'pre')).join('')}
-        <div class="flow-hint">担当と話せたら、下の段で「どこまで進んで終わったか」を押す ↓</div>
+        <div class="flow-hint coach-box" id="coach-box">
+          <div class="coach-msg" id="coach-msg"></div>
+          <div class="coach-guide">担当と話せたら、下の段で「どこまで進んで終わったか」を押す ↓</div>
+        </div>
       </div>
       <div class="flow-group-label" style="margin-top:4px;">担当と話した → どの段階で終わったか</div>
       <div class="flow-row talk">
@@ -3779,7 +3826,176 @@
     renderPaceForecast();
     renderCallLog();
     renderMotivationBand();
+    renderGrowth();
+    renderCoachMessage();
   }
+
+  // --- 成長の見える化：日ごとの集計・連続記録・週次の振り返り・バッジ・声かけ ---
+  // 1日分（全商材の合計）の集計。target は既存どおり、その日の最初の商材レコードのアポ目標
+  function getDayTotals(user, date) {
+    const day = appData[user]?.[date];
+    const t = { calls: 0, apo: 0, connect: 0, uk: 0, counter: 0, target: 3, has: false };
+    if (!day) return t;
+    const first = Object.keys(day)[0];
+    if (first && day[first].targetApo !== undefined) t.target = day[first].targetApo;
+    for (const p in day) {
+      const c = day[p].counts || [];
+      for (let i = 0; i < 10; i++) t.calls += c[i] || 0;
+      for (let i = 3; i < 10; i++) t.connect += c[i] || 0;
+      t.apo += c[9] || 0; t.uk += c[0] || 0; t.counter += c[8] || 0;
+    }
+    t.has = t.calls > 0;
+    return t;
+  }
+
+  // 目標達成の連続日数（架電した日だけを数える。休みの日は連続を途切れさせない）
+  function computeGoalStreak(user, uptoDate) {
+    const dates = Object.keys(appData[user] || {}).filter(d => d <= uptoDate && getDayTotals(user, d).has).sort().reverse();
+    let streak = 0, todayDone = false, i = 0;
+    if (dates[0] === uptoDate) {
+      const t = getDayTotals(user, uptoDate);
+      todayDone = t.apo >= t.target;
+      if (todayDone) streak = 1;
+      i = 1;
+    }
+    for (; i < dates.length; i++) {
+      const t = getDayTotals(user, dates[i]);
+      if (t.apo >= t.target) streak++; else break;
+    }
+    return { streak, todayDone };
+  }
+
+  function weekStart(dateStr) {
+    const d = new Date(`${dateStr}T00:00:00`);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return formatDateStr(d);
+  }
+  function sumRange(user, from, to) {
+    const s = { calls: 0, apo: 0, connect: 0, uk: 0, days: 0 };
+    for (const date in (appData[user] || {})) {
+      if (date < from || date > to) continue;
+      const t = getDayTotals(user, date);
+      if (!t.has) continue;
+      s.calls += t.calls; s.apo += t.apo; s.connect += t.connect; s.uk += t.uk; s.days++;
+    }
+    return s;
+  }
+
+  const BADGES = [
+    { key: 'firstApo', icon: '🎯', name: '初アポ', cond: 'はじめてアポを獲得' },
+    { key: 'streak3', icon: '🔥', name: '3日連続達成', cond: 'アポ目標を3日連続で達成' },
+    { key: 'tripleApo', icon: '🏆', name: '1日3アポ', cond: '1日に3件以上のアポ' },
+    { key: 'selfBest', icon: '📈', name: '自己ベスト更新', cond: '1日の架電数で過去最高' },
+    { key: 'counter10', icon: '💪', name: '粘りの切り返し', cond: 'カウンターまで粘った架電が累計10件' },
+    { key: 'breakthrough', icon: '🚪', name: '受付突破の達人', cond: '1週間で50架電以上・受付突破率30%以上' },
+    { key: 'closer', icon: '🤝', name: 'クロージング上手', cond: '1週間で担当20件以上・担当受注率20%以上' },
+    { key: 'steady10', icon: '📅', name: 'コツコツ10日', cond: '架電した日が累計10日' }
+  ];
+
+  function computeBadges(user, uptoDate) {
+    const dates = Object.keys(appData[user] || {}).filter(d => d <= uptoDate).sort();
+    const days = dates.map(d => ({ d, t: getDayTotals(user, d) })).filter(x => x.t.has);
+    const earned = new Set();
+    if (days.some(x => x.t.apo > 0)) earned.add('firstApo');
+    if (days.some(x => x.t.apo >= 3)) earned.add('tripleApo');
+    if (days.reduce((a, x) => a + x.t.counter, 0) >= 10) earned.add('counter10');
+    if (days.length >= 10) earned.add('steady10');
+    let best = 0;
+    days.forEach((x, i) => { if (i > 0 && x.t.calls > best) earned.add('selfBest'); best = Math.max(best, x.t.calls); });
+    // 連続達成：過去のどこかで3日連続していれば獲得
+    let run = 0;
+    days.forEach(x => { run = x.t.apo >= x.t.target ? run + 1 : 0; if (run >= 3) earned.add('streak3'); });
+    // 週単位の質の指標
+    const weeks = {};
+    days.forEach(x => { const w = weekStart(x.d); weeks[w] = weeks[w] || { calls: 0, apo: 0, connect: 0, uk: 0 }; ['calls', 'apo', 'connect', 'uk'].forEach(k => weeks[w][k] += x.t[k]); });
+    Object.values(weeks).forEach(w => {
+      if (w.calls >= 50 && w.connect / w.calls >= 0.3) earned.add('breakthrough');
+      if (w.connect >= 20 && w.apo / w.connect >= 0.2) earned.add('closer');
+    });
+    return earned;
+  }
+
+  let lastBadgeUser = null, knownBadges = null;
+  function renderGrowth() {
+    const box = document.getElementById('weekly-review');
+    if (!box || !currentUser) return;
+
+    // 連続記録
+    const st = computeGoalStreak(currentUser, currentDateStr);
+    document.getElementById('streak-chip').textContent = st.streak >= 2 ? `🔥 目標達成${st.streak}日連続` : (st.streak === 1 && !st.todayDone ? '🔥 今日達成で2日連続' : '');
+
+    // 今週 vs 先週（先週は月〜日の7日間。今週は月曜〜表示中の日付）
+    const ws = weekStart(currentDateStr);
+    const lwStart = new Date(`${ws}T00:00:00`); lwStart.setDate(lwStart.getDate() - 7);
+    const lwEnd = new Date(`${ws}T00:00:00`); lwEnd.setDate(lwEnd.getDate() - 1);
+    const cur = sumRange(currentUser, ws, currentDateStr), prev = sumRange(currentUser, formatDateStr(lwStart), formatDateStr(lwEnd));
+    const rate = (a, b) => b > 0 ? a / b * 100 : null;
+    const metrics = [
+      { label: '1日あたりの架電数', cur: cur.days ? cur.calls / cur.days : null, prev: prev.days ? prev.calls / prev.days : null, unit: '件', fmt: v => v.toFixed(1) },
+      { label: '受付突破率', cur: rate(cur.connect, cur.calls), prev: rate(prev.connect, prev.calls), unit: 'pt', fmt: v => v.toFixed(1) + '%' },
+      { label: '担当受注率（アポ/担当コネクト）', cur: rate(cur.apo, cur.connect), prev: rate(prev.apo, prev.connect), unit: 'pt', fmt: v => v.toFixed(1) + '%' },
+      { label: 'アポ率（アポ/総架電）', cur: rate(cur.apo, cur.calls), prev: rate(prev.apo, prev.calls), unit: 'pt', fmt: v => v.toFixed(1) + '%' }
+    ].map(m => ({ ...m, delta: (m.cur !== null && m.prev !== null) ? m.cur - m.prev : null }));
+    // 良くなった点を先に並べる
+    metrics.sort((a, b) => (b.delta ?? -Infinity) - (a.delta ?? -Infinity));
+    document.getElementById('weekly-title').textContent = `今週（${ws.slice(5).replace('-', '/')}〜） vs 先週`;
+    if (!cur.days && !prev.days) {
+      box.innerHTML = '<div class="weekly-note">まだ比べられる記録がありません。架電すると、ここに先週との比較が出ます。</div>';
+    } else {
+      box.innerHTML = metrics.map(m => {
+        const cls = m.delta === null ? '' : (m.delta > 0.05 ? 'up' : (m.delta < -0.05 ? 'down' : ''));
+        const deltaText = m.delta === null ? '比較なし' : `${m.delta > 0 ? '+' : (m.delta < 0 ? '−' : '±')}${Math.abs(m.delta).toFixed(1)}${m.unit}`;
+        const vals = `${m.prev !== null ? m.fmt(m.prev) : '-'} → ${m.cur !== null ? m.fmt(m.cur) : '-'}`;
+        return `<div class="weekly-row ${cls}"><span class="w-label">${m.delta > 0.05 ? '▲ ' : ''}${m.label}</span><span class="w-val">${vals}</span><span class="w-delta">${deltaText}</span></div>`;
+      }).join('') + `<div class="weekly-note">今週 ${cur.days}日・${cur.calls}架電 ／ 先週 ${prev.days}日・${prev.calls}架電（数は全商材の合計）</div>`;
+    }
+
+    // バッジ（新しく獲得したら通知。初回表示時・ユーザー切り替え時は通知しない）
+    const earned = computeBadges(currentUser, currentDateStr);
+    document.getElementById('badge-count').textContent = `${earned.size} / ${BADGES.length}`;
+    document.getElementById('badge-grid').innerHTML = BADGES.map(b => `<div class="badge ${earned.has(b.key) ? 'earned' : 'locked'}" title="${escapeHTML(b.cond)}"><div class="b-icon">${b.icon}</div><div class="b-name">${b.name}</div><div class="b-cond">${b.cond}</div></div>`).join('');
+    if (lastBadgeUser === currentUser && knownBadges && currentDateStr === getTodayString()) {
+      BADGES.filter(b => earned.has(b.key) && !knownBadges.has(b.key)).forEach(b => showToast(`バッジ獲得：${b.icon} ${b.name}`, '#icon-star'));
+    }
+    lastBadgeUser = currentUser; knownBadges = earned;
+  }
+
+  // 状況に合わせた一言（コーチ欄）。達成 > 終業間際 > アポの間隔が空いている > 午前と午後の比較 > 始業直後 > 通常 の順に選ぶ
+  function renderCoachMessage() {
+    const el = document.getElementById('coach-msg');
+    if (!el) return;
+    if (coachOverride && Date.now() < coachOverride.until) return;
+    const state = getActiveState();
+    const c = state.counts;
+    let tot = 0; for (let i = 0; i < 10; i++) tot += c[i] || 0;
+    const apo = c[9] || 0, target = state.targetApo || 1;
+    const isToday = currentDateStr === getTodayString();
+    const hour = new Date().getHours();
+    const since = computeCallsSinceApo(getActiveCallLog());
+    const ratio = getCallsPerApoInfo(tot, apo);
+    const f = isToday ? computePaceForecast() : null;
+    const h = state.hourly || {};
+    const sumCols = (key, from, to) => (h[key] || []).slice(from, to).reduce((a, b) => a + (b || 0), 0);
+    const callsIn = (from, to) => ['uketsuke', 'futsu', 'fuzai', 'tantoBK', 'apo'].reduce((a, k) => a + sumCols(k, from, to), 0);
+    const connIn = (from, to) => sumCols('tantoBK', from, to) + sumCols('apo', from, to);
+    const amCalls = callsIn(0, 3), pmCalls = callsIn(3, 9);
+
+    let msg;
+    if (apo >= target) msg = ['🎉', `目標達成おめでとうございます！ここからは自己ベスト更新を狙いましょう`];
+    else if (f && f.kind === 'forecast' && f.remainingHours > 0 && f.remainingHours <= 1) msg = ['⏰', `ラスト${Math.round(f.remainingHours * 60)}分！あと${+(target - apo).toFixed(1)}件、集中していきましょう`];
+    else if (ratio && since.n >= ratio.value * 1.5) msg = ['🍀', `アポの間隔が空いていますが、平均で${ratio.value.toFixed(0)}架電に1件。確率的にはもうすぐです`];
+    else if (isToday && hour >= 13 && amCalls >= 10 && pmCalls >= 10) {
+      const diff = connIn(3, 9) / pmCalls * 100 - connIn(0, 3) / amCalls * 100;
+      msg = diff >= 0
+        ? ['📈', `午前より受付突破率が ${diff.toFixed(1)}pt 上がっています。この調子！`]
+        : ['💡', `午後は受付突破率が午前より ${Math.abs(diff).toFixed(1)}pt 低めです。最初の一言を少し変えてみましょう`];
+    }
+    else if (tot < 5) msg = ['☀️', `今日の目標はアポ${target}件。まずは最初の10コールでリズムを作りましょう`];
+    else msg = ['👍', since.n > 0 ? `前回のアポから${since.n}件目。1件1件がアポに近づいています` : `${tot}件架電しました。1件1件がアポに近づいています`];
+    el.innerHTML = `<span class="coach-icon">${msg[0]}</span>${escapeHTML(msg[1])}`;
+  }
+  // 他の機能（切り返しトークの候補など）がコーチ欄を一時的に使うときの上書き
+  let coachOverride = null;
 
   // --- モチベーション帯：次のアポまでのゲージ・自己ベスト ---
   // 「次のアポまで」は1アポあたりの架電数を1周とし、断られた架電もアポに近づいた1件として進める
