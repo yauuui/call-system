@@ -355,6 +355,76 @@
     .funnel-rate-connector .rate-good { color: var(--success); }
     .funnel-rate-connector .rate-bad { color: var(--danger); }
 
+    /* ===== コールカウント画面（入力パネルを最初の画面に収める配置） ===== */
+    .counter-toolbar { padding: 8px 14px; gap: 10px; }
+    .counter-toolbar .filters { gap: 10px; flex-wrap: nowrap; }
+    .counter-toolbar .action-btns { gap: 6px; flex-wrap: nowrap; }
+    .counter-toolbar .filter-group { gap: 6px; }
+    .counter-toolbar .filter-group select, .counter-toolbar .filter-group input { min-width: 0; width: 128px; padding: 6px 8px; }
+    .counter-toolbar .btn { padding: 6px 10px; font-size: 12px; }
+
+    .status-band { flex-direction: row; align-items: stretch; flex-wrap: wrap; }
+    .band-seg { position: relative; display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-left: 1px solid var(--border); }
+    .band-seg:first-child { border-left: none; }
+    .band-label { font-size: 10px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    .band-timer { font-size: 24px; font-weight: 400; letter-spacing: 1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.15; color: var(--text-main); }
+    .band-timer-controls { margin: 0; gap: 6px; }
+    .band-timer-controls .btn-icon-only { width: 30px; height: 30px; }
+    .band-kpis { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 18px; }
+    .band-val { font-size: 17px; font-weight: 700; color: var(--text-main); }
+    .band-apo { flex: 1; min-width: 200px; cursor: pointer; }
+    .band-apo:hover { background: #f8fafc; }
+    .band-apo #apo-progress-text { font-size: 12px; }
+    .band-pace-text { font-size: 13px; font-weight: 700; white-space: nowrap; }
+
+    .moti-band { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; }
+    .moti-tile { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px 14px 9px; min-width: 0; }
+    .moti-tile.team { background: linear-gradient(135deg, #1e293b, #334155); border-color: #1e293b; color: #fff; }
+    .moti-head { font-size: 11px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+    .moti-head .icon { width: 14px; height: 14px; color: var(--accent); }
+    .moti-tile.team .moti-head { color: #cbd5e1; }
+    .moti-main { font-size: 15px; font-weight: 700; margin: 2px 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+    .moti-tile.team .moti-main { color: #fff; }
+    .moti-tile.team #team-apo-count { color: #5eead4; font-size: 20px; }
+    .moti-of { font-size: 12px; color: #cbd5e1; font-weight: 600; }
+    .moti-remaining { font-size: 12px; color: #fde68a; margin-left: 4px; }
+    .moti-gauge { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+    .moti-tile.team .moti-gauge { background: rgba(255,255,255,0.15); }
+    .moti-gauge-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #5eead4, var(--accent)); transition: width 0.4s ease; }
+    .moti-gauge-fill.best { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
+    .moti-gauge-fill.team { background: var(--accent); box-shadow: 0 0 8px rgba(20, 184, 166, 0.6); }
+    .moti-sub { font-size: 10px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .moti-tile.team .moti-sub { color: #94a3b8; }
+
+    /* 架電入力パネル：通話が終わった段階を押す流れ図 */
+    .flow-panel { display: flex; flex-direction: column; gap: 6px; }
+    .flow-group-label { font-size: 11px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .flow-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+    .flow-hint { grid-column: span 4; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-muted); border: 1px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; }
+    .counter-item.flow-step { position: relative; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 4px; padding: 7px 8px 8px; min-width: 0; }
+    .flow-row.talk .flow-step:not(:last-child)::after { content: '›'; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); font-size: 18px; font-weight: 700; color: #94a3b8; pointer-events: none; }
+    .flow-step .c-label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .flow-step .val { font-size: 24px; font-weight: 700; text-align: center; line-height: 1.1; color: var(--text-main); }
+    .flow-step .stepper { border: none; gap: 4px; overflow: visible; }
+    .flow-step .stepper button { height: 32px; border: 1px solid #cbd5e1; border-radius: 5px; }
+    .flow-step .stepper button.minus { width: 32px; flex-shrink: 0; }
+    .flow-step .stepper button.plus { flex: 1; width: auto; background: #f0fdfa; color: var(--accent-hover); border-color: #99f6e4; font-size: 18px; }
+    .flow-step .stepper button.plus:hover { background: #ccfbf1; }
+    .flow-step.pre .stepper button.plus { background: #f8fafc; color: var(--text-main); border-color: #cbd5e1; }
+    .flow-step.pre .stepper button.plus:hover { background: #e2e8f0; }
+    .flow-step.apo-box .val { color: #047857; }
+    .flow-step.apo-box .stepper button { border-color: #059669; }
+    .flow-step.apo-box .stepper button.minus { background: #fff; color: #047857; }
+    .flow-step.apo-box .stepper button.minus:hover { background: #ecfdf5; }
+    .flow-step.apo-box .stepper button.plus { background: #059669; color: #fff; }
+    .flow-step.apo-box .stepper button.plus:hover { background: #047857; }
+
+    .counter-details > summary { cursor: pointer; list-style: none; border-radius: var(--radius); }
+    .counter-details > summary::-webkit-details-marker { display: none; }
+    .counter-details[open] > summary { border-radius: var(--radius) var(--radius) 0 0; }
+    .details-hint { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .counter-details-body { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+
   </style>
 </head>
 <body>
@@ -490,25 +560,10 @@
     <div class="content-area">
       
       <!-- =================【タブ1: コールカウント画面】================= -->
-      <div id="page-counter" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
-        
-        <div class="card" style="margin-bottom: 0px; background: linear-gradient(135deg, #1e293b, #334155); color: #fff; border:none; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-          <div class="card-body" style="padding: 15px 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
-              <div style="font-size: 14px; font-weight: 700; display:flex; align-items:center; gap:8px;">
-                <svg class="icon" style="color:var(--accent);"><use href="#icon-star"></use></svg> 本日のチーム総アポ獲得数
-              </div>
-              <div style="font-size: 28px; font-weight: 700; color: var(--accent); line-height:1;">
-                <span id="team-apo-count">0</span> <span style="font-size: 14px; color:#cbd5e1; font-weight:600;">/ <span id="team-apo-target">0</span> 件</span>
-              </div>
-            </div>
-            <div class="progress-bar-bg" style="background: rgba(255,255,255,0.1); height: 12px; margin-top:0;">
-              <div class="progress-bar-fill" id="team-apo-progress" style="width: 0%; background: var(--accent); box-shadow: 0 0 10px rgba(20, 184, 166, 0.6);"></div>
-            </div>
-          </div>
-        </div>
+      <div id="page-counter" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
 
-        <div class="toolbar">
+        <!-- 1行目：選択欄と操作ボタン -->
+        <div class="toolbar counter-toolbar">
           <div class="filters">
             <div class="filter-group">
               <label><svg class="icon"><use href="#icon-calendar"></use></svg> 日付</label>
@@ -528,115 +583,135 @@
             </div>
           </div>
           <div class="action-btns">
-            <button class="btn btn-outline" onclick="openTemplateModal()">
-              <svg class="icon"><use href="#icon-message"></use></svg> 進捗報告テンプレ
+            <button class="btn btn-outline" onclick="openTemplateModal()" title="進捗報告テンプレ">
+              <svg class="icon"><use href="#icon-message"></use></svg> 報告
             </button>
-            <button class="btn btn-outline" onclick="copyForReview()">
-              <svg class="icon"><use href="#icon-doc"></use></svg> 振り返りコピー
+            <button class="btn btn-outline" onclick="copyForReview()" title="振り返り用の数値をコピー">
+              <svg class="icon"><use href="#icon-doc"></use></svg> 振返り
             </button>
-            <button class="btn btn-primary" onclick="downloadCSV()">
-              <svg class="icon"><use href="#icon-download"></use></svg> CSV出力
+            <button class="btn btn-primary" onclick="downloadCSV()" title="全履歴をCSVで出力">
+              <svg class="icon"><use href="#icon-download"></use></svg> CSV
             </button>
           </div>
         </div>
 
-        <div class="dashboard-grid">
-          
-          <div class="card">
-            <div class="card-header">タイマー・稼働時間</div>
-            <div class="card-body">
-              <div class="timer-display">
-                <div class="timer-time" id="display-time">00:00:00</div>
-                <div class="timer-status" id="timer-status-label">稼働時間</div>
-              </div>
-              <div style="position:relative; padding-top:5px;">
-                <div id="timer-disabled-msg" class="overlay-msg" style="border-radius:4px; font-size:13px; background:rgba(255,255,255,0.9); display:none;">※全商材まとめ閲覧モード<br>（操作不可）</div>
-                <div class="timer-controls">
-                  <button class="btn btn-primary btn-icon-only" onclick="startTimer()" title="開始">
-                    <svg class="icon"><use href="#icon-play"></use></svg>
-                  </button>
-                  <button class="btn btn-outline btn-icon-only" onclick="stopTimer()" style="background:#f59e0b; color:#fff; border:none;" title="停止">
-                    <svg class="icon"><use href="#icon-pause"></use></svg>
-                  </button>
-                  <button class="btn btn-outline btn-icon-only" onclick="resetTimer()" title="クリア">
-                    <svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg>
-                  </button>
-                </div>
-                <div class="timer-edit">
-                  <input id="edit-h" type="number" min="0" placeholder="時">
-                  <input id="edit-m" type="number" min="0" max="59" placeholder="分">
-                  <input id="edit-s" type="number" min="0" max="59" placeholder="秒">
-                  <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="setManualTime()">設定</button>
-                </div>
-              </div>
+        <!-- 2行目：状況帯（タイマー｜指標｜アポ進捗｜必要ペース） -->
+        <div class="card status-band">
+          <div class="band-seg band-timer-seg">
+            <div id="timer-disabled-msg" class="overlay-msg" style="border-radius:var(--radius) 0 0 var(--radius); font-size:12px; background:rgba(255,255,255,0.92); display:none;">全商材まとめ（操作不可）</div>
+            <div>
+              <div class="band-label" id="timer-status-label">稼働時間</div>
+              <div class="band-timer" id="display-time">00:00:00</div>
+            </div>
+            <div class="timer-controls band-timer-controls">
+              <button class="btn btn-primary btn-icon-only" onclick="startTimer()" title="開始">
+                <svg class="icon"><use href="#icon-play"></use></svg>
+              </button>
+              <button class="btn btn-outline btn-icon-only" onclick="stopTimer()" style="background:#f59e0b; color:#fff; border:none;" title="停止">
+                <svg class="icon"><use href="#icon-pause"></use></svg>
+              </button>
+              <button class="btn btn-outline btn-icon-only" onclick="resetTimer()" title="クリア">
+                <svg class="icon" style="color:#64748b;"><use href="#icon-refresh"></use></svg>
+              </button>
             </div>
           </div>
-
-          <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div class="card">
-              <div class="card-header">集計結果 ＆ 分析指標</div>
-              <div class="card-body" style="padding:15px;">
-                <div class="kpi-row">
-                  <div class="kpi-box"><div class="kpi-label">受付突破率</div><div class="kpi-val" id="res-breakthrough">0.0%</div></div>
-                  <div class="kpi-box"><div class="kpi-label">受注率</div><div class="kpi-val" id="res-orderrate">0.0%</div></div>
-                  <div class="kpi-box"><div class="kpi-label">担当受注率</div><div class="kpi-val" id="res-tanto-order">0.0%</div></div>
-                  <div class="kpi-box"><div class="kpi-label">架電数 (件/h)</div><div class="kpi-val" style="color:var(--accent);" id="res-cph">0.0</div></div>
-                </div>
-
-                <div class="target-box">
-                  <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:13px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                      <svg class="icon" style="color:var(--accent);"><use href="#icon-target"></use></svg> 本日の目標 (直接編集可)
-                    </span>
-                  </div>
-                  
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px; background:#f1f5f9; padding:12px; border-radius:4px;">
-                    <div style="grid-column: span 2; display:flex; align-items:center; gap:8px;">
-                      <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">定性目標:</span>
-                      <input type="text" id="disp-my-qual" style="flex:1; border:none; border-bottom:1px solid #cbd5e1; background:transparent; font-size:13px; color:var(--accent); font-weight:700; outline:none;" placeholder="例：アウト返しに1回粘る" onchange="updateMyTargetDirect()">
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span style="font-size:11px; color:var(--text-muted);">アポ目標:</span> 
-                      <input type="number" id="disp-my-apo" style="width:40px; border:none; border-bottom:1px solid #cbd5e1; background:transparent; font-size:13px; font-weight:700; text-align:center; outline:none;" min="1" onchange="updateMyTargetDirect()">
-                      <span style="font-size:11px;">件</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span style="font-size:11px; color:var(--text-muted);">架電目標:</span> 
-                      <input type="number" id="disp-my-cph" style="width:40px; border:none; border-bottom:1px solid #cbd5e1; background:transparent; font-size:13px; font-weight:700; text-align:center; outline:none;" min="0" step="1" onchange="updateMyTargetDirect()">
-                      <span style="font-size:11px;">件/h</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div class="progress-info">
-                      <span id="target-title-label">個人のアポ進捗</span>
-                      <span id="apo-progress-text">0% (0 / 0)</span>
-                    </div>
-                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="apo-progress-bar" style="width:0%;"></div></div>
-                    <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:#666;">
-                      <span>1アポ必要架電: <strong id="kpi-cpa" style="color:#333;">-</strong></span>
-                      <span>架電数ペース: <strong id="cph-current-display" style="color:var(--accent);">0.0</strong> / <span id="cph-target-display">0.0</span> <span id="cph-achieved-badge" style="display:none; background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; vertical-align:middle; margin-left:4px;">達成</span></span>
-                    </div>
-                    <div class="pace-forecast" id="pace-forecast"></div>
-                  </div>
-                </div>
+          <div class="band-seg band-kpis">
+            <div><div class="band-label">受付突破率</div><div class="band-val" id="res-breakthrough">0.0%</div></div>
+            <div><div class="band-label">受注率</div><div class="band-val" id="res-orderrate">0.0%</div></div>
+            <div><div class="band-label">担当受注率</div><div class="band-val" id="res-tanto-order">0.0%</div></div>
+            <div><div class="band-label">架電数/h</div><div class="band-val" style="color:var(--accent-hover);" id="res-cph">0.0</div></div>
+          </div>
+          <div class="band-seg band-apo" onclick="openCounterDetails()" title="クリックで目標の編集・ペース予測の詳細を開く">
+            <div style="flex:1; min-width:0;">
+              <div class="progress-info" style="margin-top:0;">
+                <span class="band-label" id="target-title-label">個人のアポ進捗</span>
+                <span id="apo-progress-text">0% (0 / 0)</span>
               </div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="apo-progress-bar" style="width:0%;"></div></div>
             </div>
-
-            <div class="card" style="position:relative;">
-              <div id="panel-disabled-msg" class="overlay-msg" style="border-radius:var(--radius);">※全商材まとめ閲覧モード<br>（入力不可）</div>
-              <div class="card-header">
-                <span style="display:flex; align-items:center; gap:10px;">架電入力パネル <span class="since-apo" id="since-apo" title="今日の架電のうち、直前のアポ獲得の後に何件目か"></span></span>
-                <span style="font-size:11px; font-weight:600; color:var(--text-muted); white-space:nowrap;"><kbd class="kb-hint" style="margin:0 2px;">1</kbd>〜<kbd class="kb-hint" style="margin:0 2px;">0</kbd>＋1　<kbd class="kb-hint" style="margin:0 2px;">Shift</kbd>−1　<kbd class="kb-hint" style="margin:0 2px;">Ctrl+Z</kbd>取消</span>
-              </div>
-              <div class="card-body" style="padding:15px;">
-                <div id="controls-grid" class="counter-grid">
-                </div>
-              </div>
+            <svg class="icon" style="color:var(--text-muted); flex-shrink:0;"><use href="#icon-edit"></use></svg>
+          </div>
+          <div class="band-seg band-pace">
+            <div>
+              <div class="band-label">ペース予測</div>
+              <div class="band-pace-text" id="pace-short">-</div>
             </div>
-
           </div>
         </div>
+
+        <!-- 3行目：モチベーション帯 -->
+        <div class="moti-band">
+          <div class="moti-tile" id="next-apo-tile" title="1アポあたりの架電数を1周として、断られた架電もアポに近づいた1件として進みます">
+            <div class="moti-head"><svg class="icon"><use href="#icon-target"></use></svg> 次のアポまで</div>
+            <div class="moti-main" id="next-apo-text">-</div>
+            <div class="moti-gauge"><div class="moti-gauge-fill" id="next-apo-fill" style="width:0%;"></div></div>
+            <div class="moti-sub" id="next-apo-sub"></div>
+          </div>
+          <div class="moti-tile" id="self-best-tile">
+            <div class="moti-head"><svg class="icon"><use href="#icon-trend"></use></svg> 自己ベスト（1日の架電数）</div>
+            <div class="moti-main" id="self-best-text">-</div>
+            <div class="moti-gauge"><div class="moti-gauge-fill best" id="self-best-fill" style="width:0%;"></div></div>
+            <div class="moti-sub" id="self-best-sub"></div>
+          </div>
+          <div class="moti-tile team" id="team-tile">
+            <div class="moti-head"><svg class="icon"><use href="#icon-star"></use></svg> 本日のチーム総アポ</div>
+            <div class="moti-main"><span id="team-apo-count">0</span> <span class="moti-of">/ <span id="team-apo-target">0</span> 件</span> <span class="moti-remaining" id="team-apo-remaining"></span></div>
+            <div class="moti-gauge"><div class="moti-gauge-fill team" id="team-apo-progress" style="width:0%;"></div></div>
+            <div class="moti-sub" id="team-apo-sub">チームみんなで溜めるゲージです</div>
+          </div>
+        </div>
+
+        <!-- 4行目：架電入力パネル（どこで終わったかを1タップ） -->
+        <div class="card" style="position:relative;">
+          <div id="panel-disabled-msg" class="overlay-msg" style="border-radius:var(--radius);">※全商材まとめ閲覧モード<br>（入力不可）</div>
+          <div class="card-header" style="padding:10px 16px;">
+            <span style="display:flex; align-items:center; gap:10px;">架電入力パネル <span style="font-size:11px; font-weight:600; color:var(--text-muted);">通話が終わった段階を押す</span> <span class="since-apo" id="since-apo" title="今日の架電のうち、直前のアポ獲得の後に何件目か"></span></span>
+            <span style="font-size:11px; font-weight:600; color:var(--text-muted); white-space:nowrap;"><kbd class="kb-hint" style="margin:0 2px;">1</kbd>〜<kbd class="kb-hint" style="margin:0 2px;">0</kbd>＋1　<kbd class="kb-hint" style="margin:0 2px;">Shift</kbd>−1　<kbd class="kb-hint" style="margin:0 2px;">Ctrl+Z</kbd>取消</span>
+          </div>
+          <div class="card-body" style="padding:12px 16px 14px;">
+            <div id="controls-grid" class="flow-panel"></div>
+          </div>
+        </div>
+
+        <!-- 画面外：目標の編集・ペース予測の詳細・タイマーの手動設定 -->
+        <details class="card counter-details" id="counter-details">
+          <summary class="card-header"><span style="display:flex; align-items:center; gap:6px;"><svg class="icon" style="color:var(--accent);"><use href="#icon-target"></use></svg> 本日の目標・ペース予測の詳細・タイマーの手動設定</span><span class="details-hint">クリックで開く/閉じる</span></summary>
+          <div class="card-body counter-details-body">
+            <div class="target-box">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px; background:#f1f5f9; padding:12px; border-radius:4px;">
+                <div style="grid-column: span 2; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">定性目標:</span>
+                  <input type="text" id="disp-my-qual" style="flex:1; border:none; border-bottom:1px solid #cbd5e1; background:transparent; font-size:13px; color:var(--accent-hover); font-weight:700; outline:none;" placeholder="例：アウト返しに1回粘る" onchange="updateMyTargetDirect()">
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:11px; color:var(--text-muted);">アポ目標:</span>
+                  <input type="number" id="disp-my-apo" style="width:40px; border:none; border-bottom:1px solid #cbd5e1; background:transparent; font-size:13px; font-weight:700; text-align:center; outline:none;" min="1" onchange="updateMyTargetDirect()">
+                  <span style="font-size:11px;">件</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:11px; color:var(--text-muted);">架電目標:</span>
+                  <input type="number" id="disp-my-cph" style="width:40px; border:none; border-bottom:1px solid #cbd5e1; background:transparent; font-size:13px; font-weight:700; text-align:center; outline:none;" min="0" step="1" onchange="updateMyTargetDirect()">
+                  <span style="font-size:11px;">件/h</span>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; color:#666;">
+                <span>1アポ必要架電: <strong id="kpi-cpa" style="color:#333;">-</strong></span>
+                <span>架電数ペース: <strong id="cph-current-display" style="color:var(--accent);">0.0</strong> / <span id="cph-target-display">0.0</span> <span id="cph-achieved-badge" style="display:none; background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; vertical-align:middle; margin-left:4px;">達成</span></span>
+              </div>
+              <div class="pace-forecast" id="pace-forecast"></div>
+            </div>
+            <div class="target-box">
+              <div style="font-size:12px; font-weight:700; margin-bottom:8px;">タイマーの手動設定</div>
+              <div class="timer-edit" style="border-top:none; padding-top:0; justify-content:flex-start;">
+                <input id="edit-h" type="number" min="0" placeholder="時">
+                <input id="edit-m" type="number" min="0" max="59" placeholder="分">
+                <input id="edit-s" type="number" min="0" max="59" placeholder="秒">
+                <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="setManualTime()">設定</button>
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">選択中の商材の稼働時間を、入力した値に置き換えます。</div>
+            </div>
+          </div>
+        </details>
 
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -1530,7 +1605,7 @@
         document.getElementById("edit-mode-checkbox").checked = false;
     }
 
-    updateSelectUIs(); buildControlPanel(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
+    updateSelectUIs(); buildControlPanel(); updateProductModeUI(); ensureDataExists(currentUser, currentDateStr, currentProduct); render();
   }
 
   function logout() {
@@ -1718,22 +1793,41 @@
     if (card) { card.classList.remove('kb-flash'); void card.offsetWidth; card.classList.add('kb-flash'); }
   }
 
+  // 架電入力パネルを「通話が終わった段階」の流れ図として組み立てる
+  // 1段目：担当につながる前に終わった（受付BK・不通・担当不在）
+  // 2段目：担当と話した後、どの段階で終わったか（目的 › … › カウンター › ★アポ）
+  const FLOW_PRE_IDS = [0, 1, 2];
+  const FLOW_TALK_IDS = [3, 4, 5, 6, 7, 8, 9];
   function buildControlPanel() {
     const grid = document.getElementById("controls-grid");
-    Array.from(grid.children).forEach(c => { if(c.id !== "panel-disabled-msg") grid.removeChild(c); });
-    items.forEach(item => {
-      const div = document.createElement("div");
-      div.className = `counter-item ${item.cls || ''}`;
-      div.innerHTML = `
-        <span class="c-label"><kbd class="kb-hint">${COUNT_SHORTCUT_KEYS[item.id]}</kbd>${item.name}</span>
-        <div class="stepper">
-          <button onclick="changeValue(${item.id}, -1)">−</button>
-          <div class="val" id="panel-val-${item.id}">0</div>
-          <button onclick="changeValue(${item.id}, 1)">＋</button>
-        </div>
-      `;
-      grid.appendChild(div);
-    });
+    grid.innerHTML = '';
+    const stepHTML = (id, extraCls) => {
+      const item = items[id];
+      return `<div class="counter-item flow-step ${extraCls} ${item.cls || ''}">
+          <span class="c-label"><kbd class="kb-hint">${COUNT_SHORTCUT_KEYS[id]}</kbd>${itemShortName(id)}</span>
+          <div class="val" id="panel-val-${id}">0</div>
+          <div class="stepper">
+            <button class="minus" onclick="changeValue(${id}, -1)" title="−1（Shift+${COUNT_SHORTCUT_KEYS[id]}）">−</button>
+            <button class="plus" onclick="changeValue(${id}, 1)" title="＋1（${COUNT_SHORTCUT_KEYS[id]}）">＋</button>
+          </div>
+        </div>`;
+    };
+    grid.innerHTML = `
+      <div class="flow-group-label">担当につながる前に終わった</div>
+      <div class="flow-row pre">
+        ${FLOW_PRE_IDS.map(id => stepHTML(id, 'pre')).join('')}
+        <div class="flow-hint">担当と話せたら、下の段で「どこまで進んで終わったか」を押す ↓</div>
+      </div>
+      <div class="flow-group-label" style="margin-top:4px;">担当と話した → どの段階で終わったか</div>
+      <div class="flow-row talk">
+        ${FLOW_TALK_IDS.map(id => stepHTML(id, 'talk')).join('')}
+      </div>`;
+  }
+
+  function openCounterDetails() {
+    const d = document.getElementById('counter-details');
+    d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // --- フローティング小窓モード（最小化・他のタブ表示中も見えるようにする） ---
@@ -3106,6 +3200,14 @@
     }
   }
 
+  // 全商材まとめ（閲覧のみ）かどうかで、タイマー・入力パネルの「操作不可」表示を切り替える
+  function updateProductModeUI() {
+    const isAll = (currentProduct === ALL_PRODUCTS_KEY);
+    document.getElementById("timer-disabled-msg").style.display = isAll ? "flex" : "none";
+    document.getElementById("panel-disabled-msg").style.display = isAll ? "flex" : "none";
+    document.getElementById("timer-status-label").textContent = isAll ? "稼働時間 (全商材合算)" : "稼働時間";
+  }
+
   function handleSelectionChange() {
     // タイマー動作中の切り替えは、current* を書き換える前に止めて、経過時間を「切り替え前」の日付・商材・リスト・トークで確定させる
     if (isRunning) stopTimer();
@@ -3114,11 +3216,7 @@
     currentList = document.getElementById("list-select").value;
     currentTalk = document.getElementById("talk-select").value;
     document.getElementById("date-picker").value = currentDateStr;
-    const isAll = (currentProduct === ALL_PRODUCTS_KEY);
-    
-    document.getElementById("timer-disabled-msg").style.display = isAll ? "flex" : "none";
-    document.getElementById("panel-disabled-msg").style.display = isAll ? "flex" : "none";
-    document.getElementById("timer-status-label").textContent = isAll ? "稼働時間 (全商材合算)" : "稼働時間";
+    updateProductModeUI();
 
     ensureDataExists(currentUser, currentDateStr, currentProduct); 
     render();
@@ -3540,6 +3638,55 @@
     renderMini();
     renderPaceForecast();
     renderCallLog();
+    renderMotivationBand();
+  }
+
+  // --- モチベーション帯：次のアポまでのゲージ・自己ベスト ---
+  // 「次のアポまで」は1アポあたりの架電数を1周とし、断られた架電もアポに近づいた1件として進める
+  function renderMotivationBand() {
+    const textEl = document.getElementById('next-apo-text');
+    if (!textEl) return;
+    const state = getActiveState();
+    let tot = 0; for (let i = 0; i < 10; i++) tot += state.counts[i] || 0;
+    const ratio = getCallsPerApoInfo(tot, state.counts[9] || 0);
+    const since = computeCallsSinceApo(getActiveCallLog());
+    const fill = document.getElementById('next-apo-fill'), sub = document.getElementById('next-apo-sub');
+    if (!ratio) {
+      textEl.textContent = since.n > 0 ? `${since.n}コール積み上げ中` : 'まずは1コール目から';
+      fill.style.width = '0%';
+      sub.textContent = '1アポあたりの架電数の実績ができると、次のアポまでの目安が出ます';
+    } else {
+      const per = ratio.value;
+      const remain = Math.max(1, Math.ceil(per - since.n));
+      const pct = Math.min(100, (since.n / per) * 100);
+      textEl.textContent = since.n >= per ? 'そろそろ来る！あと1コールの気持ちで' : `あと約${remain}コール`;
+      fill.style.width = `${pct}%`;
+      sub.textContent = `1アポ ≈ ${per.toFixed(1)}架電（${ratio.source}）／前回のアポから${since.n}件`;
+    }
+
+    // 自己ベスト：1日（全商材合計）の架電数の、表示中の日付より前の最高記録と比べる
+    const dayCalls = d => { let n = 0; for (const p in d || {}) { const c = d[p].counts || []; for (let i = 0; i < 10; i++) n += c[i] || 0; } return n; };
+    const today = dayCalls(appData[currentUser]?.[currentDateStr]);
+    let best = 0, bestDate = '';
+    for (const date in (appData[currentUser] || {})) {
+      if (date >= currentDateStr) continue;
+      const n = dayCalls(appData[currentUser][date]);
+      if (n > best) { best = n; bestDate = date; }
+    }
+    const bText = document.getElementById('self-best-text'), bFill = document.getElementById('self-best-fill'), bSub = document.getElementById('self-best-sub');
+    if (best === 0) {
+      bText.textContent = `今日 ${today}件`;
+      bFill.style.width = today > 0 ? '100%' : '0%';
+      bSub.textContent = '今日の記録が最初の自己ベストになります';
+    } else if (today > best) {
+      bText.textContent = `自己ベスト更新中！ ${today}件`;
+      bFill.style.width = '100%';
+      bSub.textContent = `これまでの最高 ${best}件（${bestDate.slice(5).replace('-', '/')}）`;
+    } else {
+      bText.textContent = today === best ? `自己ベストに並びました！ ${today}件` : `あと${best - today}件で自己ベスト`;
+      bFill.style.width = `${Math.min(100, (today / best) * 100)}%`;
+      bSub.textContent = `今日 ${today}件 ／ 最高 ${best}件（${bestDate.slice(5).replace('-', '/')}）`;
+    }
   }
 
   // --- 当日のペース予測 ---
@@ -3577,6 +3724,13 @@
     return apo > 0 ? calls / apo : null;
   }
 
+  // 1アポあたりの架電数：当日の実績（アポ1件以上）、なければ過去30日の同じ商材の実績。どちらもなければ null
+  function getCallsPerApoInfo(tot, apo) {
+    if (apo > 0) return { value: tot / apo, source: '当日実績' };
+    const hist = getHistoricalCallsPerApo(currentUser, currentProduct, currentDateStr);
+    return hist !== null ? { value: hist, source: `過去${PACE_HISTORY_DAYS}日の実績` } : null;
+  }
+
   function computePaceForecast() {
     const state = getActiveState();
     const c = state.counts;
@@ -3590,12 +3744,8 @@
     if (currentDateStr !== getTodayString()) return { kind: 'notToday', remainingApo };
     if (remainingApo <= 0) return { kind: 'achieved' };
 
-    let callsPerApo = null, ratioSource = '';
-    if (apo > 0) { callsPerApo = tot / apo; ratioSource = '当日実績'; }
-    else {
-      callsPerApo = getHistoricalCallsPerApo(currentUser, currentProduct, currentDateStr);
-      ratioSource = `過去${PACE_HISTORY_DAYS}日の実績`;
-    }
+    const ratio = getCallsPerApoInfo(tot, apo);
+    const callsPerApo = ratio ? ratio.value : null, ratioSource = ratio ? ratio.source : '';
 
     const end = getShiftEnd(currentUser, currentDateStr);
     const endDate = new Date(`${currentDateStr}T00:00:00`); endDate.setHours(end.h, end.m, 0, 0);
@@ -3646,6 +3796,13 @@
     }
     el.innerHTML = html;
 
+    const shortEl = document.getElementById('pace-short');
+    if (shortEl) {
+      shortEl.textContent = mini ? mini.replace(/^目標まであと/, 'あと') : (f.kind === 'notToday' ? '当日のみ表示' : '-');
+      shortEl.className = `band-pace-text ${miniClass}`;
+      shortEl.title = el.textContent.trim();
+    }
+
     if (isMiniMode) {
       const m = miniDoc.getElementById('mini-pace');
       if (m) {
@@ -3684,6 +3841,9 @@
     document.getElementById("team-apo-target").textContent = targetApo;
     let tProg = targetApo > 0 ? Math.min(100, (todayTeamApoTotal / targetApo) * 100) : 0;
     document.getElementById("team-apo-progress").style.width = tProg + "%";
+    const remainTeam = targetApo - todayTeamApoTotal;
+    document.getElementById("team-apo-remaining").textContent = targetApo > 0 ? (remainTeam > 0 ? `チームであと${+remainTeam.toFixed(1)}件！` : '目標達成！') : '';
+    document.getElementById("team-apo-sub").textContent = targetApo > 0 ? 'チームみんなで溜めるゲージです' : 'KPI/KGIのシフトに予想を入れるとチーム目標が表示されます';
 
     const cphList = document.getElementById("rank-cph"); const apoList = document.getElementById("rank-apo");
     if (!cphList || !apoList) return;
