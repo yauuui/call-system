@@ -292,6 +292,14 @@
     .mini-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; flex-shrink: 0; }
     .mini-session-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex-shrink: 0; }
     .mini-session-row.single { grid-template-columns: 1fr; }
+    .mini-pace { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--text-main); text-align: center; background: #f8fafc; border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 当日のペース予測 */
+    .pace-forecast { margin-top: 10px; padding: 8px 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 12px; line-height: 1.7; color: var(--text-main); }
+    .pace-forecast .pace-title { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+    .pace-forecast .pace-sub { font-size: 11px; color: var(--text-muted); }
+    .pace-ok { color: #047857; font-weight: 700; }
+    .pace-ng { color: #b91c1c; font-weight: 700; }
     .mini-session-row label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .mini-session-row select { width: 100%; min-width: 0; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; background: #fff; color: var(--text-main); outline: none; }
     .mini-session-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2); }
@@ -579,6 +587,7 @@
                       <span>1アポ必要架電: <strong id="kpi-cpa" style="color:#333;">-</strong></span>
                       <span>架電数ペース: <strong id="cph-current-display" style="color:var(--accent);">0.0</strong> / <span id="cph-target-display">0.0</span> <span id="cph-achieved-badge" style="display:none; background:var(--success); color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; vertical-align:middle; margin-left:4px;">達成</span></span>
                     </div>
+                    <div class="pace-forecast" id="pace-forecast"></div>
                   </div>
                 </div>
               </div>
@@ -1092,6 +1101,7 @@
           <div class="mini-stat-val" id="mini-stat-orderrate">0.0%</div>
         </div>
       </div>
+      <div class="mini-pace" id="mini-pace"></div>
 
       <div class="mini-mode-tabs">
         <button class="mini-tab-btn active" id="mini-tab-count" title="カウントモード">
@@ -1696,9 +1706,9 @@
     let targetWindow;
     try {
       if ('documentPictureInPicture' in window) {
-        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 575 });
+        targetWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 610 });
       } else {
-        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=615,popup=yes');
+        targetWindow = window.open('', 'kaden_mini_widget', 'width=300,height=650,popup=yes');
         if (!targetWindow) {
           showToast('ポップアップがブロックされました。ブラウザの設定をご確認ください', '#icon-bell');
           return;
@@ -3380,6 +3390,122 @@
     renderHourlyTable();
     updateRankings();
     renderMini();
+    renderPaceForecast();
+  }
+
+  // --- 当日のペース予測 ---
+  // アポ目標までの残り件数と終業までの残り時間から、あと何件の架電が必要か・どのペースが必要かを見積もる。
+  // 1アポあたりの架電数は当日の実績を使い、当日まだアポがなければ過去30日の実績で代用する。
+  // 終業時刻は KPI/KGI のシフト（終了時刻）があればそれを、なければ 18:00 を使う。
+  const PACE_DEFAULT_END = { h: 18, m: 0 };
+  const PACE_HISTORY_DAYS = 30;
+
+  function formatDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function getShiftEnd(user, dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    const e = kpiData?.[`${y}-${m}`]?.users?.[user]?.daily?.[parseInt(d)]?.e;
+    const mm = /^(\d{1,2}):(\d{2})/.exec(e || '');
+    return mm ? { h: +mm[1], m: +mm[2], fromShift: true } : { ...PACE_DEFAULT_END, fromShift: false };
+  }
+
+  // 指定日より前の PACE_HISTORY_DAYS 日間の、1アポあたりの架電数（アポがなければ null）
+  function getHistoricalCallsPerApo(user, product, dateStr) {
+    const from = new Date(`${dateStr}T00:00:00`); from.setDate(from.getDate() - PACE_HISTORY_DAYS);
+    const fromStr = formatDateStr(from);
+    let calls = 0, apo = 0;
+    for (const date in (appData[user] || {})) {
+      if (date < fromStr || date >= dateStr) continue;
+      for (const p in appData[user][date]) {
+        if (product !== ALL_PRODUCTS_KEY && p !== product) continue;
+        const c = appData[user][date][p].counts || [];
+        for (let i = 0; i < 10; i++) calls += c[i] || 0;
+        apo += c[9] || 0;
+      }
+    }
+    return apo > 0 ? calls / apo : null;
+  }
+
+  function computePaceForecast() {
+    const state = getActiveState();
+    const c = state.counts;
+    let tot = 0; for (let i = 0; i < 10; i++) tot += c[i] || 0;
+    const apo = c[9] || 0;
+    const target = state.targetApo || 1;
+    const remainingApo = Math.max(0, target - apo);
+    const elapsed = getTotalSeconds();
+    const currentCph = elapsed > 0 ? tot / (elapsed / 3600) : 0;
+
+    if (currentDateStr !== getTodayString()) return { kind: 'notToday', remainingApo };
+    if (remainingApo <= 0) return { kind: 'achieved' };
+
+    let callsPerApo = null, ratioSource = '';
+    if (apo > 0) { callsPerApo = tot / apo; ratioSource = '当日実績'; }
+    else {
+      callsPerApo = getHistoricalCallsPerApo(currentUser, currentProduct, currentDateStr);
+      ratioSource = `過去${PACE_HISTORY_DAYS}日の実績`;
+    }
+
+    const end = getShiftEnd(currentUser, currentDateStr);
+    const endDate = new Date(`${currentDateStr}T00:00:00`); endDate.setHours(end.h, end.m, 0, 0);
+    const remainingHours = Math.max(0, (endDate.getTime() - Date.now()) / 3600000);
+    const endLabel = `${end.h}:${String(end.m).padStart(2, '0')}${end.fromShift ? '（シフト）' : ''}`;
+
+    const neededCalls = callsPerApo !== null ? Math.ceil(remainingApo * callsPerApo) : null;
+    const requiredCph = (neededCalls !== null && remainingHours > 0) ? neededCalls / remainingHours : null;
+    const projectedApo = (callsPerApo !== null && currentCph > 0) ? apo + (currentCph * remainingHours) / callsPerApo : null;
+    return { kind: 'forecast', remainingApo, callsPerApo, ratioSource, neededCalls, remainingHours, endLabel, requiredCph, currentCph, projectedApo, target };
+  }
+
+  function fmtNum(v) { return v % 1 !== 0 ? v.toFixed(1) : String(v); }
+
+  function renderPaceForecast() {
+    const el = document.getElementById('pace-forecast');
+    if (!el || !currentUser) return;
+    const f = computePaceForecast();
+    let html = '', mini = '', miniClass = '';
+
+    if (f.kind === 'notToday') {
+      html = `<span class="pace-title">ペース予測</span>　<span class="pace-sub">当日の日付を表示しているときのみ表示されます</span>`;
+    } else if (f.kind === 'achieved') {
+      html = `<span class="pace-title">ペース予測</span>　<span class="pace-ok">アポ目標を達成しています</span>`;
+      mini = 'アポ目標達成！'; miniClass = 'pace-ok';
+    } else {
+      html = `<div><span class="pace-title">ペース予測</span>　目標まであと <strong>${fmtNum(f.remainingApo)}件</strong>`;
+      if (f.neededCalls !== null) {
+        html += ` → 約 <strong>${f.neededCalls}架電</strong> 必要 <span class="pace-sub">（1アポ ≈ ${f.callsPerApo.toFixed(1)}架電・${f.ratioSource}）</span>`;
+      } else {
+        html += ` <span class="pace-sub">（1アポあたりの架電数の実績がないため、必要な架電数は計算できません）</span>`;
+      }
+      html += `</div>`;
+      if (f.remainingHours <= 0) {
+        html += `<div class="pace-sub">終業 ${f.endLabel} を過ぎています</div>`;
+        mini = `目標まであと${fmtNum(f.remainingApo)}件（終業時刻を過ぎています）`;
+      } else {
+        const ok = f.requiredCph !== null && f.currentCph >= f.requiredCph;
+        html += `<div>終業 ${f.endLabel} まで残り <strong>${f.remainingHours.toFixed(1)}h</strong>`;
+        if (f.requiredCph !== null) html += ` → 必要ペース <span class="${ok ? 'pace-ok' : 'pace-ng'}">${f.requiredCph.toFixed(1)}件/h</span> <span class="pace-sub">（現在 ${f.currentCph.toFixed(1)}件/h）</span>`;
+        html += `</div>`;
+        if (f.projectedApo !== null) html += `<div class="pace-sub">今のペースを続けた場合の終業時の見込み: <strong style="color:var(--text-main);">${f.projectedApo.toFixed(1)}件</strong>（目標 ${fmtNum(f.target)}件）</div>`;
+        mini = f.requiredCph !== null
+          ? `目標まであと${fmtNum(f.remainingApo)}件｜必要 ${f.requiredCph.toFixed(1)}件/h`
+          : `目標まであと${fmtNum(f.remainingApo)}件`;
+        if (f.requiredCph !== null) miniClass = ok ? 'pace-ok' : 'pace-ng';
+      }
+    }
+    el.innerHTML = html;
+
+    if (isMiniMode) {
+      const m = miniDoc.getElementById('mini-pace');
+      if (m) {
+        m.style.display = mini ? 'block' : 'none';
+        m.textContent = mini;
+        m.className = `mini-pace ${miniClass}`;
+        m.title = el.textContent.trim();
+      }
+    }
   }
 
   function updateRankings() {
@@ -3592,7 +3718,11 @@
     const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], {type:'text/csv;charset=utf-8;'})); l.download=`架電記録_全履歴_${getTodayString()}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l);
   }
 
-  window.onload = function() { init(); initMiniWidgetHandlers(); document.addEventListener('keydown', handleCountShortcut); };
+  window.onload = function() {
+    init(); initMiniWidgetHandlers(); document.addEventListener('keydown', handleCountShortcut);
+    // ペース予測の「残り時間」は時刻とともに変わるため、タイマー停止中も1分ごとに更新する
+    setInterval(() => { if (currentUser && document.getElementById('page-counter').style.display !== 'none') renderPaceForecast(); }, 60000);
+  };
 </script>
 </body>
 </html>
