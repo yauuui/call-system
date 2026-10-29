@@ -4998,7 +4998,7 @@
     el.innerHTML = html;
 
     const shortEl = document.getElementById('pace-short');
-    if (shortEl) {
+    if (shortEl && !activeSprint) {
       shortEl.textContent = mini ? mini.replace(/^目標まであと/, 'あと') : (f.kind === 'notToday' ? '当日のみ表示' : '-');
       shortEl.className = `band-pace-text ${miniClass}`;
       shortEl.title = el.textContent.trim();
@@ -5006,7 +5006,7 @@
 
     if (isMiniMode) {
       const m = miniDoc.getElementById('mini-pace');
-      if (m) {
+      if (m && !activeSprint) {
         m.style.display = mini ? 'block' : 'none';
         m.textContent = mini;
         m.className = `mini-pace ${miniClass}`;
